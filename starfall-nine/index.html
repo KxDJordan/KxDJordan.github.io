@@ -942,7 +942,7 @@ class Match{
     else if(loose){// the ball is loose (dropped in, or through the infield): runners take what the throw allows
       const f=pick,tt=b=>{const q=BX[b],dd=Math.hypot(q[0]-Rp[0],q[1]-Rp[1]);return tR+f.xfer+tthr(dd,f.thr)+(dd>250?.5:0)};let ahead=5;const cand=[];
       for(const r of rn){let b=r.b;const min=r===bat?1:(r.b===1||r.b===2&&ba||r.b===3&&ba&&bc)?r.b+1:r.b;
-        for(;;){const nb=b+1;if(nb>4||nb>=ahead)break;if(b<min||arr(r,nb)+.08-r.agg<tt(nb)+gs()*.18)b=nb;else break}
+        for(;;){const nb=b+1;if(nb>4||nb>=ahead)break;if(b<min||arr(r,nb)-.05-r.agg<tt(nb)+gs()*.18)b=nb;else break}
         r.dest=b;if(b<4)ahead=b;if(b>r.b&&arr(r,b)>tR)cand.push(r)}
       // the fielder throws where he has the best chance of an out
       let play=null;for(const r of cand){const tA=tt(r.dest)+gs()*.1+(50-f.arm)*.002,mrg=arr(r,r.dest)-tA-.08;if(mrg<-.5||r===bat&&r.dest===1&&mrg<=0)continue;if(!play||(mrg>0)!==(play.mrg>0)?mrg>0:r.dest>play.r.dest)play={r,tA,mrg}}
@@ -2067,6 +2067,10 @@ function newAnim(e){const A={dur:1.5,ball:[],fld:{},run:[],fx:[],cam:[],e,ump:[]
 function runAt(r,t,short=0){const n=r.legs.length;if(!n)return{x:0,y:0,dx:0,dy:1,rem:99,run:0,moving:false};let i=0;while(i<n-1&&t>=r.legs[i].t1)i++;const L=r.legs[i];let f=clamp((t-L.t0)/(L.t1-L.t0),0,1);if(!i)f=f*f*(3-2*f)*.3+f*.7;if(short&&i===n-1&&L.len>short*2)f=Math.min(f,1-short/L.len);
   let d=f*L.len,j=0;while(j<L.seg.length-1&&d>L.seg[j]){d-=L.seg[j];j++}const a=L.pts[j],b=L.pts[j+1],u=L.seg[j]?clamp(d/L.seg[j],0,1):1;
   return{x:lerp(a[0],b[0],u),y:lerp(a[1],b[1],u),dx:b[0]-a[0],dy:b[1]-a[1],rem:i===n-1?(1-f)*L.len:99,run:L.acc+f*L.len,moving:t>r.t0&&t<r.t1}}
+// a batter with a single rounds first, looks for second, and goes back when the throw comes in
+function roundBag(r,s,t){const q=r.round;if(!q||t<=r.t1)return s;const u=(t-r.t1)/q.dur;if(u>=1)return s;
+  const a=BASEXY[1],b=BASEXY[2],l=d2(a,b),ux=(b[0]-a[0])/l,uy=(b[1]-a[1])/l,out=u<.35,g=out?Math.sin(u/.35*Math.PI/2):Math.cos((u-.35)/.65*Math.PI/2),sg=out?1:-1;
+  return{x:a[0]+ux*q.d*g,y:a[1]+uy*q.d*g,dx:ux*sg,dy:uy*sg,rem:99,run:s.run+q.d*(out?g:2-g),moving:true}}
 function outCall(A,t,at,out,base,txt){A.at(t,()=>{pop(txt||(out?'OUT!':'SAFE!'),[at[0],at[1],7.5],out?'#ef5b5b':'#3ecf8e',1.2);if(out){V.outs=Math.min(3,V.outs+1);hud()}
     let u=base===4?0:base>0?base:0;if(!base){let bd=1e9;UMPS.forEach((q,i)=>{const d=d2(q,at);if(i&&d<bd){bd=d;u=i}})}A.ump[u]={t:V.et,k:out?'punch':'safe'};shake(out?4:2)})}
 function buildPlay(e){
@@ -2095,10 +2099,14 @@ function buildPlay(e){
     const lastOut=S.calls.filter(c=>c.out&&!c.catch).map(c=>c.t*k);
     if(e.res==='DP')big(Math.max(...lastOut,0)+.12,'Double play','');else if(e.res==='SF')big(T+.5,'Sac fly','sm');
     else if(type==='E')big(T+.1,'Error','sm');else if(e.thr&&e.thr.out)big(Math.max(...lastOut,0)+.15,e.thr.to===4?'Out at the plate':'Thrown out','');
-    else if(['1B','2B','3B'].includes(type)){const tl=A.ball.length>1&&A.ball[1].k==='roll'&&air.k==='air'?air.t1:e.ih?Math.max(...S.calls.map(c=>c.t*k),T):air.k==='roll'?T*.7:T;big(tl+.05,e.ih?'Infield hit':type==='1B'?'Base hit':type==='2B'?'Double':'Triple',type==='1B'?'sm':'');tDesc=Math.min(tDesc,tl)}
+    else if(['1B','2B','3B'].includes(type)){const tl=A.ball.length>1&&A.ball[1].k==='roll'&&air.k==='air'?air.t1:e.ih?Math.max(...S.calls.map(c=>c.t*k),T):air.k==='roll'?T*.7:T;const fin=e.ih?'Infield hit':type==='1B'?'Single':type==='2B'?'Double':'Triple';
+      // the hit is only named once the batter has stopped: until then it is just a ball in play
+      if(bat&&bat.outT==null){if(!e.ih)big(tl+.05,'It drops in','sm');big(bat.t1+.05,fin,type==='1B'?'sm':'');tDesc=bat.t1;
+        if(type==='1B'&&!e.ih&&OFS.includes(e.fpos)){bat.round={d:13,dur:1.7};A.dur=Math.max(A.dur||0,bat.t1+1.95)}}
+      else{big(tl+.05,fin,type==='1B'?'sm':'');tDesc=Math.min(tDesc,tl)}}
     if(air.k==='air'&&air.te==null&&!hr)A.at(air.t1,()=>dust([air.b[0],air.b[1],0],5));
     if(e.dive&&air.k==='roll')A.at(T,()=>dust([air.b[0],air.b[1],0],12));
-    A.dur=S.dur*k;for(const r of A.run)A.dur=Math.max(A.dur,(r.outT!=null?r.outT:r.t1)+.75);
+    A.dur=Math.max(A.dur||0,S.dur*k);for(const r of A.run)A.dur=Math.max(A.dur,(r.outT!=null?r.outT:r.t1)+.75);
     A.cam=autoCam(A);if(homeT.length){homeT.sort((a,b)=>a-b);A.home=[Math.max(.5,homeT[0]-1.15),homeT[homeT.length-1]+.55];A.dur=Math.max(A.dur,A.home[1]+.35)}
     if(tDesc>1e8)tDesc=T}
   // while the ball is live the ticker says what was hit; the result goes up when it is decided
@@ -2213,7 +2221,7 @@ function drawFld(x,c){
   for(const pos of POS.concat('P')){const p=pos==='P'?V.P[V.pit[fs]].p:F.field[pos],st=A&&A.fld[pos]?fldAt(A.fld[pos],t):{x:FPOS[pos][0],y:FPOS[pos][1],mov:false,act:null,dist:0,dx:0,dy:0};figs.push(figFld(p,pos,st,bxy,A,t,fs))}
   UMPS.forEach((q,i)=>{const sg=A&&A.ump[i];figs.push(mkFig(V.ump,2,'u',q[0],q[1],i?yawTo(q[0],q[1],BASEXY[i][0],BASEXY[i][1]):0,sg&&t-sg.t<.95?mixP(PO.stand,PO[sg.k],sstep((t-sg.t)/.12)):i?PO.stand:PO.ump))});
   if(A)for(const r of A.run){inA[r.pid]=1;let tt=t,al=1;if(r.outT!=null&&t>r.outT){tt=r.atBase?Math.min(t,r.t1):Math.min(t,r.outT+.35);al=1-clamp((t-r.outT-.5)/.45,0,1);if(al<=0)continue}
-    const s=runAt(r,tt,r.outT!=null&&r.slide?(r.slide==='H'?5.4:4):0),isBat=r.from===0;let po,yaw=Math.atan2(s.dx,s.dy),role='r',mir=false;
+    const s=roundBag(r,runAt(r,tt,r.outT!=null&&r.slide?(r.slide==='H'?5.4:4):0),t),isBat=r.from===0;let po,yaw=Math.atan2(s.dx,s.dy),role='r',mir=false;
     if(t<r.t0){if(isBat){po=PO.bFollow;role='b';mir=V.batL;yaw=V.batL?-Math.PI/2:Math.PI/2}else{po=PO.lead;yaw=yawTo(s.x,s.y,0,40)}}
     else if(s.moving||tt<t){po=poseRun(s.run/6.6*TAU,r.jog?.6:1);
       if(r.slide&&s.rem<10)po=mixP(po,r.slide==='H'?PO.slideH:PO.slideF,sstep((10-s.rem)/4.5))}

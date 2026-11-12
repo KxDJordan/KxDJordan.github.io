@@ -348,7 +348,7 @@ class Match{
     else if(loose){// the ball is loose (dropped in, or through the infield): runners take what the throw allows
       const f=pick,tt=b=>{const q=BX[b],dd=Math.hypot(q[0]-Rp[0],q[1]-Rp[1]);return tR+f.xfer+tthr(dd,f.thr)+(dd>250?.5:0)};let ahead=5;const cand=[];
       for(const r of rn){let b=r.b;const min=r===bat?1:(r.b===1||r.b===2&&ba||r.b===3&&ba&&bc)?r.b+1:r.b;
-        for(;;){const nb=b+1;if(nb>4||nb>=ahead)break;if(b<min||arr(r,nb)+.08-r.agg<tt(nb)+gs()*.18)b=nb;else break}
+        for(;;){const nb=b+1;if(nb>4||nb>=ahead)break;if(b<min||arr(r,nb)-.05-r.agg<tt(nb)+gs()*.18)b=nb;else break}
         r.dest=b;if(b<4)ahead=b;if(b>r.b&&arr(r,b)>tR)cand.push(r)}
       // the fielder throws where he has the best chance of an out
       let play=null;for(const r of cand){const tA=tt(r.dest)+gs()*.1+(50-f.arm)*.002,mrg=arr(r,r.dest)-tA-.08;if(mrg<-.5||r===bat&&r.dest===1&&mrg<=0)continue;if(!play||(mrg>0)!==(play.mrg>0)?mrg>0:r.dest>play.r.dest)play={r,tA,mrg}}
