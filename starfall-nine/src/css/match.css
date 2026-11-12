@@ -1,0 +1,40 @@
+/* match */
+.mt{position:absolute;inset:0;background:#0c1036;overflow:hidden}
+.mt canvas#cv{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
+.hudp{position:absolute;background:rgba(11,13,36,.86);border:2px solid var(--ink);border-radius:5px;padding:5px 8px;font-size:11.5px;color:var(--chalk);box-shadow:3px 3px 0 rgba(0,0,0,.4)}
+.sb{left:8px;top:8px;display:flex;gap:10px;align-items:center}
+.sb .tm{display:grid;grid-template-columns:20px 38px 22px;align-items:center;gap:4px;font-weight:800;font-size:13px}
+.sb .tm .n{font-family:var(--disp);font-size:15px;color:var(--gold)}
+.sb .inn{text-align:center;font-weight:800;line-height:1.1}
+.dots i{display:inline-block;width:8px;height:8px;border-radius:50%;border:1.5px solid var(--chalk);margin-right:2px}.dots i.on{background:var(--rose);border-color:var(--rose)}
+.ctl{right:8px;top:8px;display:flex;gap:5px;flex-wrap:wrap;max-width:46%;justify-content:flex-end;background:none;border:0;box-shadow:none;padding:0}
+.ctl .btn{min-height:34px;padding:3px 9px;font-size:11.5px}
+.ctl .btn.on{background:var(--gold)}
+.tick{left:50%;top:60px;transform:translateX(-50%);max-width:60%;text-align:center;font-weight:700;pointer-events:none;transition:opacity .2s}
+.pc{bottom:8px;width:176px;display:grid;grid-template-columns:44px 1fr;gap:6px;align-items:center}
+.pc.l{left:8px}.pc.r{right:8px}
+.pc canvas{width:44px;height:44px;border-radius:5px;border:2px solid var(--chalk);background:#333}
+.pc b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+.pc .bar{background:rgba(255,255,255,.18);margin-top:3px;height:6px}
+.pc.zone{border-color:var(--gold);box-shadow:0 0 14px var(--gold)}
+#banner{position:absolute;left:0;right:0;top:34%;text-align:center;font-family:var(--disp);font-size:clamp(30px,8vw,64px);color:var(--gold);-webkit-text-stroke:2px var(--ink);text-shadow:4px 4px 0 var(--ink),6px 6px 0 var(--rose);pointer-events:none;opacity:0;transform:rotate(-4deg)}
+#banner.go{animation:ban var(--bd,1.3s) both}
+#banner.sm{font-size:clamp(20px,5vw,36px);color:var(--chalk);text-shadow:3px 3px 0 var(--ink)}
+@keyframes ban{0%{opacity:0;transform:rotate(-4deg) scale(2.2)}18%{opacity:1;transform:rotate(-4deg) scale(1)}80%{opacity:1;transform:rotate(-4deg) scale(1.04)}100%{opacity:0;transform:rotate(-4deg) scale(1.1) translateX(40px)}}
+#cut{position:absolute;inset:0;pointer-events:none;opacity:0;overflow:hidden;--zc:#ff8a3c;--cd:1.8s}
+#cut.go{animation:cutA var(--cd) both}
+#cut .dim{position:absolute;inset:0;background:rgba(11,13,36,.6)}
+#cut .band{position:absolute;left:-10%;right:-10%;top:22%;height:56%;background:radial-gradient(rgba(11,13,36,.2) 2px,transparent 2.4px) 0 0/9px 9px,linear-gradient(90deg,transparent,rgba(255,255,255,.4) 50%,transparent),var(--zc);border-top:5px solid var(--ink);border-bottom:5px solid var(--ink);transform:skewY(-5deg)}
+#cut .lines{position:absolute;inset:-20% -20%;background:repeating-linear-gradient(90deg,transparent 0 22px,rgba(255,255,255,.5) 22px 24px,transparent 24px 61px,rgba(255,255,255,.3) 61px 62px);transform:skewY(-5deg);-webkit-mask-image:linear-gradient(transparent 26%,#000 34%,#000 66%,transparent 74%);mask-image:linear-gradient(transparent 26%,#000 34%,#000 66%,transparent 74%)}
+#cut.go .lines{animation:lines .35s linear infinite}
+#cut canvas{position:absolute;left:6%;top:50%;height:74%;aspect-ratio:1;transform:translateY(-54%)}
+#cut.go canvas{animation:cutP var(--cd) both}
+#cut .tx{position:absolute;left:44%;right:3%;top:50%;transform:translateY(-55%) rotate(-5deg)}
+#cut.go .tx{animation:cutT var(--cd) both}
+#cut .k{font-family:var(--disp);font-size:clamp(13px,3.2vw,22px);color:var(--ink);background:var(--gold);display:inline-block;padding:1px 10px;border:2.5px solid var(--ink)}
+#cut .nm{font-family:var(--disp);font-size:clamp(24px,6.4vw,54px);line-height:1;color:#fff;-webkit-text-stroke:2px var(--ink);text-shadow:4px 4px 0 var(--ink);margin:6px 0}
+#cut .ds{font-weight:800;font-size:clamp(11px,2.3vw,15px);color:var(--ink);background:rgba(255,250,240,.92);display:inline-block;padding:2px 8px;border-radius:3px}
+@keyframes cutA{0%{opacity:0}8%{opacity:1}88%{opacity:1}100%{opacity:0}}
+@keyframes cutP{0%{transform:translate(-120%,-54%)}14%{transform:translate(4%,-54%)}88%{transform:translate(8%,-54%)}100%{transform:translate(60%,-54%)}}
+@keyframes cutT{0%{transform:translate(120%,-55%) rotate(-5deg)}16%{transform:translate(0,-55%) rotate(-5deg)}88%{transform:translate(-3%,-55%) rotate(-5deg)}100%{transform:translate(-80%,-55%) rotate(-5deg)}}
+@keyframes lines{to{background-position:-124px 0}}
