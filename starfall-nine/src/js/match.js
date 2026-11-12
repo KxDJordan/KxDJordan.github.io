@@ -402,7 +402,7 @@ function newAnim(e){const A={dur:1.5,ball:[],fld:{},run:[],fx:[],cam:[],e,ump:[]
       const seg=[];let len=0;for(let j=1;j<pts.length;j++){const l=d2(pts[j],pts[j-1]);seg.push(l);len+=l}r.legs.push({pts,seg,len,t0:tp,t1:Math.max(L.t,tp+.05),acc:r.d});r.d+=len;tp=L.t;a=e});
     r.t1=tp;A.run.push(r);return r};
   return A}
-function runAt(r,t){const n=r.legs.length;if(!n)return{x:0,y:0,dx:0,dy:1,rem:99,run:0,moving:false};let i=0;while(i<n-1&&t>=r.legs[i].t1)i++;const L=r.legs[i];let f=clamp((t-L.t0)/(L.t1-L.t0),0,1);if(!i)f=f*f*(3-2*f)*.3+f*.7;
+function runAt(r,t,short=0){const n=r.legs.length;if(!n)return{x:0,y:0,dx:0,dy:1,rem:99,run:0,moving:false};let i=0;while(i<n-1&&t>=r.legs[i].t1)i++;const L=r.legs[i];let f=clamp((t-L.t0)/(L.t1-L.t0),0,1);if(!i)f=f*f*(3-2*f)*.3+f*.7;if(short&&i===n-1&&L.len>short*2)f=Math.min(f,1-short/L.len);
   let d=f*L.len,j=0;while(j<L.seg.length-1&&d>L.seg[j]){d-=L.seg[j];j++}const a=L.pts[j],b=L.pts[j+1],u=L.seg[j]?clamp(d/L.seg[j],0,1):1;
   return{x:lerp(a[0],b[0],u),y:lerp(a[1],b[1],u),dx:b[0]-a[0],dy:b[1]-a[1],rem:i===n-1?(1-f)*L.len:99,run:L.acc+f*L.len,moving:t>r.t0&&t<r.t1}}
 function outCall(A,t,at,out,base,txt){A.at(t,()=>{pop(txt||(out?'OUT!':'SAFE!'),[at[0],at[1],7.5],out?'#ef5b5b':'#3ecf8e',1.2);if(out){V.outs=Math.min(3,V.outs+1);hud()}
@@ -428,7 +428,7 @@ function buildPlay(e){
       if(r.slide)A.at(Math.max(r.t0,r.t1-.3),()=>{const p=runAt(r,V.et);dust([p.x,p.y,0],14)})}
     let nOut=0;for(const c of S.calls){const t=c.t*k+.04,at=c.at||BASEXY[c.base||1];if(c.out)tDesc=Math.min(tDesc,t);
       if(c.catch){outCall(A,t,at,true,0);const kd=e.bb.kind;big(t+.02,e.robbed?'Robbed!':e.dive?'What a catch':kd==='L'?'Line out':kd==='P'?'Pop out':'Fly out',e.robbed?'':'sm');if(e.dive||e.robbed)A.at(t,()=>{shake(6);dust(at,10)})}
-      else outCall(A,t+.03,at,c.out,c.base);
+      else outCall(A,t+.03,at,c.out,c.base,c.out&&c.base>0&&c.force===false?'TAGGED OUT!':null);
       if(c.out)nOut++}
     const lastOut=S.calls.filter(c=>c.out&&!c.catch).map(c=>c.t*k);
     if(e.res==='DP')big(Math.max(...lastOut,0)+.12,'Double play','');else if(e.res==='SF')big(T+.5,'Sac fly','sm');
@@ -454,13 +454,13 @@ function buildSteal(e){const A=newAnim(e),B=b=>BASEXY[b],tb=e.thr,S=e.sim,k=1/TC
   const tgt=B(tb||lead.to),mid=[(C[0]+tgt[0])/2,(C[1]+tgt[1])/2];A.cam=[{t:0,c:mid,r:d2(C,tgt)/2+14},{t:del,c:mid,r:d2(C,tgt)/2+10},{t:del+.55,c:tgt,r:34}];let tEnd=lead.t1+.8;
   if(tb){const to=B(tb),cv=tb===2?(V.batL?'SS':'2B'):'3B',tT=S.tT*k,tA=S.tA*k;A.mvF(cv,tb===2?[to[0],to[1]-1.5]:[to[0]+1.5,to[1]+.5],rel,Math.max(rel+.5,tA-.25));if(tb===2)A.act('P',del+.25,'duck');
     if(!e.ok){lead.outT=Math.max(lead.t1,tA)-.02;lead.atBase=true}
-    A.act('C',tT,'throw',to);A.thr(tT,tA,C,to);A.act(cv,tA,'tag',C);outCall(A,Math.max(tA,lead.t1)+.07,to,!e.ok,tb);
+    A.act('C',tT,'throw',to);A.thr(tT,tA,C,to);A.act(cv,tA,'tag',C);outCall(A,Math.max(tA,lead.t1)+.07,to,!e.ok,tb,e.ok?null:'TAGGED OUT!');
     A.at(Math.max(tA,lead.t1)+.14,()=>banner(e.ok?'Stolen base':'Caught stealing',e.ok?'sm':'',1.15));tEnd=Math.max(tA,lead.t1)+1.05}
   else A.at(lead.t1,()=>banner('Stolen base','sm',1.1));
   for(const r of A.run)tEnd=Math.max(tEnd,r.t1+.6);A.dur=tEnd;tick(`${sn(lead.p)} takes off for ${BASEN[lead.to]}...`);A.at(tb?Math.max(S.tA*k,lead.t1)+.1:lead.t1,()=>tick(e.desc));return A}
 function buildPick(e){const A=newAnim(e),b1=BASEXY[1],M=FPOS.P,tT=.4,tA=tT+d2(M,b1)/THR,ld=e.lead||11;A.keepBat=true;
   const r=A.runner(e.pid,1,ld,.3,[{to:1,t:e.out?tA+.12:tA-.07}]);r.slide='H';r.out=e.out;if(e.out){r.outT=tA+.08;r.atBase=true}
-  const sp=r.legs[0].pts[0];A.mvF('1B',[b1[0]-1.5,b1[1]+.5],0,.35);A.act('P',tT,'throw',b1);A.thr(tT,tA,M,b1);A.act('1B',tA,'tag',M);outCall(A,tA+.1,b1,e.out,1);A.at(r.t0+.1,()=>dust([lerp(sp[0],b1[0],.5),lerp(sp[1],b1[1],.5),0],10));
+  const sp=r.legs[0].pts[0];A.mvF('1B',[b1[0]-1.5,b1[1]+.5],0,.35);A.act('P',tT,'throw',b1);A.thr(tT,tA,M,b1);A.act('1B',tA,'tag',M);outCall(A,tA+.1,b1,e.out,1,e.out?'PICKED OFF!':null);A.at(r.t0+.1,()=>dust([lerp(sp[0],b1[0],.5),lerp(sp[1],b1[1],.5),0],10));
   if(e.out)A.at(tA+.15,()=>banner('Picked off','',1.15));A.cam=[{t:0,c:[34,62],r:50},{t:tA,c:[54,63],r:34}];A.dur=tA+(e.out?1.2:.8);return A}
 // default direction: start on the plate, follow the ball, tighten on whoever ends up with it
 function autoCam(A){const K=[{t:0,c:[0,24],r:48}];let last=0;
@@ -551,7 +551,7 @@ function drawFld(x,c){
   for(const pos of POS.concat('P')){const p=pos==='P'?V.P[V.pit[fs]].p:F.field[pos],st=A&&A.fld[pos]?fldAt(A.fld[pos],t):{x:FPOS[pos][0],y:FPOS[pos][1],mov:false,act:null,dist:0,dx:0,dy:0};figs.push(figFld(p,pos,st,bxy,A,t,fs))}
   UMPS.forEach((q,i)=>{const sg=A&&A.ump[i];figs.push(mkFig(V.ump,2,'u',q[0],q[1],i?yawTo(q[0],q[1],BASEXY[i][0],BASEXY[i][1]):0,sg&&t-sg.t<.95?mixP(PO.stand,PO[sg.k],sstep((t-sg.t)/.12)):i?PO.stand:PO.ump))});
   if(A)for(const r of A.run){inA[r.pid]=1;let tt=t,al=1;if(r.outT!=null&&t>r.outT){tt=r.atBase?Math.min(t,r.t1):Math.min(t,r.outT+.35);al=1-clamp((t-r.outT-.5)/.45,0,1);if(al<=0)continue}
-    const s=runAt(r,tt),isBat=r.from===0;let po,yaw=Math.atan2(s.dx,s.dy),role='r',mir=false;
+    const s=runAt(r,tt,r.outT!=null&&r.slide?(r.slide==='H'?5.4:4):0),isBat=r.from===0;let po,yaw=Math.atan2(s.dx,s.dy),role='r',mir=false;
     if(t<r.t0){if(isBat){po=PO.bFollow;role='b';mir=V.batL;yaw=V.batL?-Math.PI/2:Math.PI/2}else{po=PO.lead;yaw=yawTo(s.x,s.y,0,40)}}
     else if(s.moving||tt<t){po=poseRun(s.run/6.6*TAU,r.jog?.6:1);
       if(r.slide&&s.rem<10)po=mixP(po,r.slide==='H'?PO.slideH:PO.slideF,sstep((10-s.rem)/4.5))}

@@ -272,7 +272,7 @@ class Match{
     if(bd)rn.push(mkR(bd,3));if(bc)rn.push(mkR(bc,2));if(ba)rn.push(mkR(ba,1));const bat=mkR(p,0);rn.push(bat);
     const arr=(r,b)=>r.ts+(r.b?.3:.62)+((b-r.b)*90-r.lead)/r.v+(b-r.b-1)*.14;
     let type,code,fpos=null,outs=0,dive=false,robbed=null,usedD=null,thr=null,kind,runsIn=0,err=false,fc=false,lastOutForce=false;const outT=[];
-    const putOut=(r,t,base,force)=>{r.out={t,base};outs++;outT.push(t);lastOutForce=!!force;S.calls.push({t,base,out:true,at:base?BX[base]:null,pid:r.p.id})};
+    const putOut=(r,t,base,force)=>{r.out={t,base};outs++;outT.push(t);lastOutForce=!!force;S.calls.push({t,base,out:true,force:!!force,at:base?BX[base]:null,pid:r.p.id})};
     // ---------- ball flight ----------
     const air=la>=8;let T=0,L=null,pick=null,tR=0,Rp=null;
     if(air){const v=ev*1.467,th=la*Math.PI/180,k=clamp(.8-.008*(la-15),.5,.82)+(100-ev)*.0012,dist=v*v*Math.sin(2*th)/32.2*k,h=Math.pow(v*Math.sin(th),2)/64.4*.8;T=2*v*Math.sin(th)/32.2*.95;
