@@ -637,7 +637,7 @@ const SKILLS=[
 ['Dugout','Tactics',[['scouting','Scouting Reports','Your pitchers get +2 to every pitch',1],['greenlight','Green Light','Runners steal more often and succeed 8% more',1],['bullpen','Bullpen Whisperer','Your relievers get +5 to every pitch',1],['rally','Rally Caller','From the 6th inning, tied or behind, your batters get +6 Contact and Power',2],['conductor','Zone Conductor','Zone gauges fill 25% faster and every Zone lasts one batter longer',2]]],
 ['Clubhouse','Leadership',[['teamtalk','Team Talk','Fatigue hurts your players 25% less in games',1],['charm','Sponsor Charm','Sponsor income +25%',1],['network','Staff Network','Assistant coaches cost 20% less and help 25% more',1],['whisper','Board Whisperer','Board confidence drops half as fast',2],['legend','Legend’s Aura','Better tryout prospects and +20% coach XP',2]]]];
 const FOCUS={balanced:['Balanced','A bit of everything',[]],batting:['Batting cage','Contact, Power, Eye',['con','pow','eye']],pitching:['Bullpen work','Velocity, Control, Break',['vel','ctl','brk']],defense:['Fielding drills','Fielding, Arm, pitcher Control',['fld','arm','ctl']],cond:['Conditioning','Speed and Stamina',['spd','sta']],rest:['Rest day','No gains, big recovery',[]]};
-const STAFFROLE={pitching:['Pitching coach',['vel','ctl','brk']],batting:['Batting coach',['con','pow','eye']],defense:['Catching & fielding coach',['fld','arm']],cond:['Conditioning coach',['spd','sta']]};
+const STAFFROLE={pitching:['Pitching coach',['vel','ctl','brk']],batting:['Batting coach',['con','pow','eye']],defense:['Catching & fielding coach',['fld','arm']],cond:['Conditioning coach',['spd','sta']],scout:['Head scout',[]]};
 const NDAYS=17;
 const sk=id=>!!(G.s&&G.s.coach&&G.s.coach.skills[id]);
 const has=(p,b)=>p.badges.includes(b);
@@ -1161,6 +1161,8 @@ function endSeason(){
   for(const ms of S.missions){const ok=missionProg(ms).ok;ms.done=ok;if(ok){S.money+=ms.m;gainXP(ms.xp);S.board.conf=clamp(S.board.conf+12,0,100)}else S.board.conf=clamp(S.board.conf-(sk('whisper')?5:10),0,100);se.ms.push({text:ms.text,ok,m:ms.m})}
   const up=standings('u18').slice(0,2).map(t=>t.id),down=standings('prem').slice(6).map(t=>t.id);se.up=up;se.down=down;
   se.fired=S.board.conf<=0;se.conf=S.board.conf;
+  if(S.repSeason!==S.season){const r0=clubRep(),cw=S.cup?S.cup.r.flat().filter(t=>t.w==='user').length:0,score=clamp([100,80,65,50,38,26,14,5][rank-1]+(lg==='prem'?12:0)+cw*8+(S.cup&&S.cup.champ==='user'?6:0),0,100);
+    S.rep=Math.round(lerp(r0,score,.6));S.repSeason=S.season;se.rep=S.rep;se.repD=S.rep-r0}
   S.hist.unshift({season:S.season,lg,rank,w:UT().w,l:UT().l,cup:S.cup&&S.cup.champ==='user'});
   G.se=se;G.screen='season';render()}
 function offseason(){
@@ -1172,12 +1174,29 @@ function offseason(){
     if(!user){const base=lg==='prem'?57:44;const need=pos=>{t.roster.push(genPlayer(base+3,pos,ri(15,16),pos==='P'?(t.roster.filter(q=>q.role==='SP').length<3?'SP':'RP'):''))};
       while(t.roster.filter(isP).length<5)need('P');for(const pos of POS)if(!t.roster.some(p=>p.pos===pos))need(pos);while(t.roster.length<16)need(pick(POS));while(t.roster.filter(p=>!isP(p)).length<10)need(pick(POS))}}
   S.season++;S.train.spot=[];
-  const lg=userLg(),base=(lg==='prem'?57:44)+2,t=UT(),pool=[];
-  const needP=Math.max(0,5-t.roster.filter(isP).length);
-  for(let i=0;i<needP+5;i++)pool.push(genPlayer(base,'P',ri(15,16),i%2?'RP':'SP'));
-  while(pool.length<24)pool.push(genPlayer(base,pick(POS),ri(15,16)));
-  if(sk('legend'))for(const p of pool)p.pot=clamp(p.pot+6,0,97);
-  G.try={pool,picked:[]};G.screen='tryouts';render()}
+  const t=UT(),pool=[],needP=Math.max(0,5-t.roster.filter(isP).length),q=scoutInfo(),n=24+q.stars;
+  for(let i=0;i<needP+5;i++)pool.push(genProspect('P',i%2?'RP':'SP',q));
+  for(const pos of POS)if(!t.roster.some(p=>p.pos===pos))pool.push(genProspect(pos,'',q));
+  while(pool.length<n)pool.push(genProspect(pick(POS),'',q));
+  if(q.rep>=70){const st=pool.slice().sort((a,b)=>b.pot-a.pot)[0];st.pot=clamp(st.pot+8,0,97);st.star=true}
+  G.try={pool,picked:[],info:q,searches:0};G.screen='tryouts';render()}
+/* ---- recruiting: what drives prospect quality ---- */
+const REPN=[[85,'Powerhouse'],[65,'Renowned'],[45,'Respected'],[25,'Local name'],[0,'Unknown']];
+function clubRep(){const S=G.s;return S.rep==null?(userLg()==='prem'?45:30):S.rep}
+const repName=r=>REPN.find(x=>r>=x[0])[1];
+// Everything that shapes a tryout class: league level, club reputation (last seasons' finish and cup runs), the head scout, the Legend's Aura skill.
+function scoutInfo(){const S=G.s,lg=userLg(),rp=clubRep(),sc=S.staff.scout,stars=sc?sc.stars*(sk('network')?1.25:1):0,rf=(rp-40)/60;
+  const q={lg,rep:rp,repName:repName(rp),stars:sc?sc.stars:0,scout:sc?sc.name:null,lgBase:(lg==='prem'?57:44)+2,repBase:Math.round(rf*4*10)/10,repPot:Math.round(rf*5*10)/10,scBase:Math.round(stars*.4*10)/10,scPot:Math.round(stars*1.2*10)/10,legend:sk('legend')?6:0,fitChance:clamp(.4+stars*.08,0,.85)};
+  q.base=q.lgBase+q.repBase+q.scBase;q.pot=q.repPot+q.scPot+q.legend;return q}
+const fitsTeam=(p,t)=>isP(p)?TDEF[t.style.def].fit.includes(p.ps):TOFF[t.style.off].fit.includes(p.os)||TDEF[t.style.def].fit.includes(p.ds);
+// One prospect. Scouts look for players who suit the club's team styles: with chance q.fitChance they keep looking (up to 5 candidates) until one fits.
+function genProspect(pos,role,q,bonus=0){const t=UT(),want=R()<q.fitChance&&(isP({pos})?t.style.def!=='balanced':t.style.off!=='balanced'||t.style.def!=='balanced');let p;
+  for(let i=0;i<(want?5:1);i++){p=genPlayer(q.base+bonus,pos,ri(15,16),role);if(!want||fitsTeam(p,t))break}
+  p.pot=clamp(Math.round(p.pot+q.pot),Math.ceil(ovr(p))+1,97);return p}
+// Paid scouting trips during tryouts. Each adds prospects found further afield, slightly better than the local class.
+const SEARCH=[{n:'Regional search',cost:800,add:6,bonus:1},{n:'National search',cost:1800,add:6,bonus:2.5}];
+function widerSearch(){const S=G.s,T=G.try,o=T&&SEARCH[T.searches];if(!o||S.money<o.cost)return false;S.money-=o.cost;T.searches++;
+  for(let i=0;i<o.add;i++)T.pool.push(genProspect(i<2?'P':pick(POS),i<2?(i?'RP':'SP'):'',T.info,o.bonus));save();return true}
 function tryoutState(){const t=UT(),sel=G.try.pool.filter(p=>G.try.picked.includes(p.id)),all=t.roster.concat(sel),np=all.filter(isP).length,nb=all.length-np;
   return{n:all.length,np,nb,ok:all.length===16&&np>=4&&nb>=10,slots:16-t.roster.length}}
 function finishTryouts(auto){const t=UT();
@@ -1492,7 +1511,7 @@ train(){const S=G.s,t=UT(),max=sk('mentor')?4:3;
   <section class="card"><div class="card-h"><h2>Spotlight players</h2><small>${S.train.spot.length} of ${max}</small></div><div class="note" style="border-top:0;border-bottom:1px solid var(--line)">Spotlight players train at double speed and can learn new badges.</div>
   <div class="list">${t.roster.slice().sort((a,b)=>(b.pot-ovr(b))-(a.pot-ovr(a))).map(p=>{const on=S.train.spot.includes(p.id);return `<div class="li tap ${on?'me':''}" role="button" tabindex="0" onclick="A.spot('${p.id}')"><span class="chk ${on?'on':''}">${ic('check',14)}</span><span class="pp">${isP(p)?p.role:p.pos}</span><div class="who"><span class="nm">${esc(p.name)}</span><span class="sub">Age ${p.age}${p.badges.length?` · <span class="goldc">${p.badges.length} badge${p.badges.length>1?'s':''}</span>`:''}</span></div>${rt(ovr(p))}<span style="width:44px;text-align:right;white-space:nowrap"><span class="lbl">Pot</span> ${potB(p)}</span></div>`}).join('')}</div></section></div>`},
 
-staff(){const S=G.s;const eff=(r,s)=>`+${Math.round(s.stars*8*(sk('network')?1.25:1))}% ${r==='cond'?'Speed and Stamina gains, faster recovery':STAFFROLE[r][1].map(k=>k[0].toUpperCase()+k.slice(1)).join(', ')+' gains'}`;
+staff(){const S=G.s;const eff=(r,s)=>r==='scout'?`+${s.stars} prospects at tryouts, +${(s.stars*1.2*(sk('network')?1.25:1)).toFixed(1)} potential, more prospects who fit your team style`:`+${Math.round(s.stars*8*(sk('network')?1.25:1))}% ${r==='scout'?'on scouting: more prospects at tryouts, higher potential and more who fit your team style':r==='cond'?'Speed and Stamina gains, faster recovery':STAFFROLE[r][1].map(k=>k[0].toUpperCase()+k.slice(1)).join(', ')+' gains'}`;
   return `<div class="vh"><h1>Staff</h1><span class="mut">Payroll ${money(staffPay())} per day</span></div>
   <section class="card"><div class="card-h"><h2>Assistant coaches</h2></div><div class="list">${Object.entries(STAFFROLE).map(([r,d])=>{const s=S.staff[r];return `<div class="li" style="align-items:flex-start;padding-top:10px;padding-bottom:10px"><div class="who"><span class="lbl">${d[0]}</span>${s?`<span class="nm" style="margin-top:2px">${esc(s.name)} ${stars(s.stars)}</span><div class="mut" style="white-space:normal;margin-top:2px">${eff(r,s)}. ${money(s.pay)} per day</div>`:'<div class="mut" style="margin-top:2px">Nobody hired yet.</div>'}</div>${s?`<button class="btn danger sm" onclick="A.release('${r}')">Release</button>`:''}</div>`}).join('')}</div></section>
   <section class="card"><div class="card-h"><h2>Available this season</h2></div><div class="list">${S.pool.map(s=>`<div class="li"><div class="who"><span class="nm">${esc(s.name)} ${stars(s.stars)}</span><span class="sub">${STAFFROLE[s.role][0]} · ${money(s.pay)} / day</span></div><button class="btn sm ${S.staff[s.role]?'alt':''}" onclick="A.hire('${s.id}')">${S.staff[s.role]?'Replace':'Hire'}</button></div>`).join('')||'<div class="empty">Everyone has signed elsewhere.</div>'}</div></section>`},
@@ -1522,7 +1541,7 @@ league(){const S=G.s,tab=G.lgTab||userLg();let b;
 
 board(){const S=G.s,prem=userLg()==='prem',inc=Math.round((prem?340:220)*(sk('charm')?1.25:1));
   return `<div class="vh"><h1>Board</h1><span class="mut">Career ${S.career.w}–${S.career.l}</span></div><div class="cols"><div><section class="card"><div class="card-h"><h2>Board confidence</h2><small>${Math.round(S.board.conf)} of 100</small></div><div class="card-b">${confBar(S.board.conf)}<p class="mut" style="margin:10px 0 0">Wins and completed missions raise confidence. If it is empty when the season ends, the board replaces you.</p></div><div>${missionsHTML()}</div></section></div>
-  <div><section class="card"><div class="card-h"><h2>Money</h2></div><table class="kv"><tr><td>Balance</td><td><b class="num" style="font-size:18px">${money(S.money)}</b></td></tr><tr><td>Sponsors, per day</td><td class="good">${money(inc)}</td></tr><tr><td>Win bonus</td><td class="good">${money(120)}</td></tr><tr><td>Assistant coaches, per day</td><td class="${staffPay()?'bad':''}">${money(-staffPay())}</td></tr></table></section>
+  <div><section class="card"><div class="card-h"><h2>Money</h2></div><table class="kv"><tr><td>Balance</td><td><b class="num" style="font-size:18px">${money(S.money)}</b></td></tr><tr><td>Sponsors, per day</td><td class="good">${money(inc)}</td></tr><tr><td>Club reputation</td><td>${clubRep()} · ${repName(clubRep())}</td></tr><tr><td>Win bonus</td><td class="good">${money(120)}</td></tr><tr><td>Assistant coaches, per day</td><td class="${staffPay()?'bad':''}">${money(-staffPay())}</td></tr></table></section>
   <section class="card"><div class="card-h"><h2>Career</h2><small>${S.career.w}–${S.career.l}</small></div><div class="card-b flush">${S.hist.map(h=>`<div class="news">Season ${h.season}: ${ord(h.rank)} in ${LG[h.lg].s}, ${h.w}–${h.l}${h.cup?', Cup winners':''}</div>`).join('')||'<div class="empty">Your first season is under way.</div>'}</div><div class="card-f"><button class="btn ghost sm" onclick="A.quit()">Save and exit to title</button></div></section></div></div>`}
 };
 const canLearn=id=>{const c=G.s.coach;if(c.skills[id])return false;for(const b of SKILLS){const i=b[2].findIndex(n=>n[0]===id);if(i>=0)return i===0||!!c.skills[b[2][i-1][0]]}return false};
@@ -1582,16 +1601,26 @@ function vSeason(){const se=G.se,S=G.s,me=UT(),mv=se.up.includes('user')?'up':se
   <section class="card"><div class="hero"><span class="lbl">Final position</span><div class="big ${se.title?'goldc':''}" style="margin-top:6px">${se.title?'League champions!':'You finished '+ord(se.rank)}</div><div class="mut" style="margin-top:6px">${me.w}–${me.l}${S.cup&&S.cup.champ==='user'?' · Starfall Cup winners':''}</div></div>
   <table><tr><th class="n">#</th><th>Club</th><th class="n">W–L</th><th></th></tr>${se.st.map((x,i)=>`<tr class="${x.id==='user'?'me':''}"><td class="n" style="width:34px"><span class="pos">${i+1}</span></td><td class="pl">${clubCell(S.teams[x.id],x.id==='user')}</td><td class="n">${x.w}–${x.l}</td><td class="n">${se.up.includes(x.id)?'<span class="chip gr">Promoted</span>':se.down.includes(x.id)?'<span class="chip r">Relegated</span>':''}</td></tr>`).join('')}</table></section>
   <div><section class="card"><div class="card-h"><h2>Board verdict</h2><small>Confidence ${Math.round(se.conf)}</small></div><div class="card-b" style="padding-bottom:10px">${confBar(se.conf)}</div><div>${se.ms.map(x=>`<div class="ms"><span class="chip ${x.ok?'gr':'r'}">${x.ok?'Done':'Missed'}</span><div><div class="t">${x.text}</div>${x.ok?`<div class="mut">Paid ${money(x.m)}</div>`:''}</div></div>`).join('')}</div>
-  <div class="note">${se.fired?'<b style="color:var(--bad)">The board has run out of patience and is replacing you.</b> Your career with this club is over.':`${mv==='up'?'<b class="good">Your club is going up to the Premier Crown!</b>':mv==='down'?'<b class="bad">Your club drops to the Rising League.</b>':'Your club stays in the same league.'} Eighteen-year-olds graduate now, so tryouts come next.`}</div></section></div></div></div></div>
+  <div class="note">${se.fired?'<b style="color:var(--bad)">The board has run out of patience and is replacing you.</b> Your career with this club is over.':`${mv==='up'?'<b class="good">Your club is going up to the Premier Crown!</b>':mv==='down'?'<b class="bad">Your club drops to the Rising League.</b>':'Your club stays in the same league.'} Eighteen-year-olds graduate now, so tryouts come next.`}${se.rep!=null?` Club reputation is now <b>${se.rep}</b> (${repName(se.rep)}, ${se.repD>=0?'+':'−'}${Math.abs(se.repD)}), which shapes the quality of your tryout class.`:''}</div></section></div></div></div></div>
   <div class="page-f"><div class="sp"></div><button class="btn" onclick="${se.fired?'A.fired()':'A.off()'}">${se.fired?'Start a new career':'Hold tryouts'}</button></div></div>`}
 
 /* ---------- tryouts ---------- */
+function scoutCard(){const T=G.try,q=T.info,S=G.s,sg=v=>(v>0?'+':v<0?'−':'')+Math.abs(v).toFixed(1),nx=SEARCH[T.searches];
+  const row=(l,v,d)=>`<tr><td>${l}<div class="mut" style="white-space:normal">${d}</div></td><td class="num" style="vertical-align:top;white-space:nowrap">${v}</td></tr>`;
+  return `<section class="card"><div class="card-h"><h2>Scouting report</h2><small>${T.pool.length} prospects</small></div><table class="kv">
+  ${row('League',q.lgBase.toFixed(0)+' base',LG[q.lg].n+' sets the starting talent level.')}
+  ${row('Club reputation · '+q.repName,sg(q.repBase)+' rating · '+sg(q.repPot)+' pot',`Reputation ${q.rep} of 100, built from league finishes and cup runs.${q.rep>=70?' A blue-chip prospect came to see you.':''}`)}
+  ${row('Head scout',q.scout?sg(q.scBase)+' rating · '+sg(q.scPot)+' pot':'None',q.scout?esc(q.scout)+' found '+q.stars+' extra prospect'+(q.stars===1?'':'s')+'.':'Hire one under Staff for more and better prospects next year.')}
+  ${q.legend?row('Legend’s Aura','+'+q.legend+' pot','Coach skill.'):''}
+  ${row('Style match',Math.round(q.fitChance*100)+'%','Share of prospects scouted specifically to fit your team styles.')}</table>
+  <div class="card-b row wrapr" style="gap:8px 12px">${nx?`<button class="btn sm alt" ${S.money<nx.cost?'disabled':''} onclick="A.search()">${nx.n} · ${money(nx.cost)}</button><span class="mut" style="flex:1;min-width:150px;white-space:normal">Adds ${nx.add} prospects from further afield. Funds ${money(S.money)}.</span>`:'<span class="mut">Both scouting trips are done.</span>'}</div></section>`}
 function vTryouts(){const st=tryoutState(),t=UT(),flt=G.tryF||'all',fo=teamFit(t,'off'),fd=teamFit(t,'def');
   const anyFit=p=>styleFits(p,t).some(s=>s.fit),pool=G.try.pool.filter(p=>flt==='all'||(flt==='p'?isP(p):flt==='b'?!isP(p):anyFit(p)));
   const tile=(v,max,l,ok)=>`<div class="tile ${ok?'ok':''}"><b>${v}<small> / ${max}</small></b><span>${l}</span></div>`;
   return `<div class="page"><div class="page-h">${logoSVG(t,36)}<h1>Tryouts<small>Sign prospects for season ${G.s.season}</small></h1></div><div class="main"><div class="wrap">
   <div class="cols" style="gap:0 12px"><div class="need">${tile(st.n,16,'Roster',st.n===16)}${tile(st.np,'4+','Pitchers',st.np>=4)}${tile(st.nb,'10+','Batters',st.nb>=10)}</div>
   <section class="card"><div class="card-b" style="font-size:13px"><div class="row wrapr" style="gap:6px 14px"><span><span class="lbl">Offence</span> <b>${esc(fo.n)}</b></span><span><span class="lbl">Defence</span> <b>${esc(fd.n)}</b></span></div><div class="mut" style="margin-top:6px">${fo.fit.length||fd.fit.length?'Prospects with a green style tag fit the way your club plays.':'You have not set a team style yet, so no prospect is marked as a fit. You can set one under Tactics once the season starts.'} Tap a prospect for the full card.</div></div></section></div>
+  ${scoutCard()}
   <div class="seg">${[['all','All'],['b','Batters'],['p','Pitchers'],['fit','Style fits']].map(x=>`<button class="${flt===x[0]?'on':''}" onclick="A.tryF('${x[0]}')">${x[1]}</button>`).join('')}</div>
   <section class="card"><div class="list">${pool.map(p=>{const on=G.try.picked.includes(p.id);return `<div class="li ${on?'me':''}"><div class="row tap" role="button" tabindex="0" style="flex:1;gap:10px;min-height:44px" onclick="A.card('${p.id}')">${pt(p,40)}<div class="who"><span class="nm">${esc(p.name)}</span><span class="sub"><b>${isP(p)?p.role:p.pos}</b><span>${p.age}y</span>${styleTags(p,t)}</span></div>${rt(ovr(p))}<span style="width:20px;text-align:center">${potB(p)}</span></div><button class="btn sm ${on?'gold':'alt'}" ${!on&&st.n>=16?'disabled':''} onclick="A.sign('${p.id}')">${on?'Signed':'Sign'}</button></div>`}).join('')||'<div class="empty">No prospects match this filter.</div>'}</div></section>
   <p class="mut" style="margin:0 2px">Sign prospects until the roster reaches 16. You need at least 4 pitchers and 10 position players. The letter next to each rating is potential.</p></div></div>
@@ -1624,7 +1653,7 @@ const A={
   release(r){const S=G.s;if(S.staff[r]){S.pool.push(S.staff[r]);S.staff[r]=null}save();render()},
   node(id){G.nodeSel=id;render()},
   learn(id){const c=G.s.coach,n=SKILLS.flatMap(b=>b[2]).find(x=>x[0]===id);if(!canLearn(id)||c.sp<n[3])return;c.sp-=n[3];c.skills[id]=true;save();render()},
-  lgTab(k){G.lgTab=k;render()},rTab(k){G.rTab=k;render()},boxTab(i){G.boxTab=i;render()},tryF(k){G.tryF=k;render()},
+  lgTab(k){G.lgTab=k;render()},rTab(k){G.rTab=k;render()},boxTab(i){G.boxTab=i;render()},tryF(k){G.tryF=k;render()},search(){widerSearch();render()},
   sign(id){const p=G.try.picked,i=p.indexOf(id);if(i>=0)p.splice(i,1);else if(tryoutState().n<16)p.push(id);render()}
 };
 // keyboard activation for role=button rows

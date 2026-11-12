@@ -43,7 +43,7 @@ const SKILLS=[
 ['Dugout','Tactics',[['scouting','Scouting Reports','Your pitchers get +2 to every pitch',1],['greenlight','Green Light','Runners steal more often and succeed 8% more',1],['bullpen','Bullpen Whisperer','Your relievers get +5 to every pitch',1],['rally','Rally Caller','From the 6th inning, tied or behind, your batters get +6 Contact and Power',2],['conductor','Zone Conductor','Zone gauges fill 25% faster and every Zone lasts one batter longer',2]]],
 ['Clubhouse','Leadership',[['teamtalk','Team Talk','Fatigue hurts your players 25% less in games',1],['charm','Sponsor Charm','Sponsor income +25%',1],['network','Staff Network','Assistant coaches cost 20% less and help 25% more',1],['whisper','Board Whisperer','Board confidence drops half as fast',2],['legend','Legend’s Aura','Better tryout prospects and +20% coach XP',2]]]];
 const FOCUS={balanced:['Balanced','A bit of everything',[]],batting:['Batting cage','Contact, Power, Eye',['con','pow','eye']],pitching:['Bullpen work','Velocity, Control, Break',['vel','ctl','brk']],defense:['Fielding drills','Fielding, Arm, pitcher Control',['fld','arm','ctl']],cond:['Conditioning','Speed and Stamina',['spd','sta']],rest:['Rest day','No gains, big recovery',[]]};
-const STAFFROLE={pitching:['Pitching coach',['vel','ctl','brk']],batting:['Batting coach',['con','pow','eye']],defense:['Catching & fielding coach',['fld','arm']],cond:['Conditioning coach',['spd','sta']]};
+const STAFFROLE={pitching:['Pitching coach',['vel','ctl','brk']],batting:['Batting coach',['con','pow','eye']],defense:['Catching & fielding coach',['fld','arm']],cond:['Conditioning coach',['spd','sta']],scout:['Head scout',[]]};
 const NDAYS=17;
 const sk=id=>!!(G.s&&G.s.coach&&G.s.coach.skills[id]);
 const has=(p,b)=>p.badges.includes(b);
@@ -567,6 +567,8 @@ function endSeason(){
   for(const ms of S.missions){const ok=missionProg(ms).ok;ms.done=ok;if(ok){S.money+=ms.m;gainXP(ms.xp);S.board.conf=clamp(S.board.conf+12,0,100)}else S.board.conf=clamp(S.board.conf-(sk('whisper')?5:10),0,100);se.ms.push({text:ms.text,ok,m:ms.m})}
   const up=standings('u18').slice(0,2).map(t=>t.id),down=standings('prem').slice(6).map(t=>t.id);se.up=up;se.down=down;
   se.fired=S.board.conf<=0;se.conf=S.board.conf;
+  if(S.repSeason!==S.season){const r0=clubRep(),cw=S.cup?S.cup.r.flat().filter(t=>t.w==='user').length:0,score=clamp([100,80,65,50,38,26,14,5][rank-1]+(lg==='prem'?12:0)+cw*8+(S.cup&&S.cup.champ==='user'?6:0),0,100);
+    S.rep=Math.round(lerp(r0,score,.6));S.repSeason=S.season;se.rep=S.rep;se.repD=S.rep-r0}
   S.hist.unshift({season:S.season,lg,rank,w:UT().w,l:UT().l,cup:S.cup&&S.cup.champ==='user'});
   G.se=se;G.screen='season';render()}
 function offseason(){
@@ -578,12 +580,29 @@ function offseason(){
     if(!user){const base=lg==='prem'?57:44;const need=pos=>{t.roster.push(genPlayer(base+3,pos,ri(15,16),pos==='P'?(t.roster.filter(q=>q.role==='SP').length<3?'SP':'RP'):''))};
       while(t.roster.filter(isP).length<5)need('P');for(const pos of POS)if(!t.roster.some(p=>p.pos===pos))need(pos);while(t.roster.length<16)need(pick(POS));while(t.roster.filter(p=>!isP(p)).length<10)need(pick(POS))}}
   S.season++;S.train.spot=[];
-  const lg=userLg(),base=(lg==='prem'?57:44)+2,t=UT(),pool=[];
-  const needP=Math.max(0,5-t.roster.filter(isP).length);
-  for(let i=0;i<needP+5;i++)pool.push(genPlayer(base,'P',ri(15,16),i%2?'RP':'SP'));
-  while(pool.length<24)pool.push(genPlayer(base,pick(POS),ri(15,16)));
-  if(sk('legend'))for(const p of pool)p.pot=clamp(p.pot+6,0,97);
-  G.try={pool,picked:[]};G.screen='tryouts';render()}
+  const t=UT(),pool=[],needP=Math.max(0,5-t.roster.filter(isP).length),q=scoutInfo(),n=24+q.stars;
+  for(let i=0;i<needP+5;i++)pool.push(genProspect('P',i%2?'RP':'SP',q));
+  for(const pos of POS)if(!t.roster.some(p=>p.pos===pos))pool.push(genProspect(pos,'',q));
+  while(pool.length<n)pool.push(genProspect(pick(POS),'',q));
+  if(q.rep>=70){const st=pool.slice().sort((a,b)=>b.pot-a.pot)[0];st.pot=clamp(st.pot+8,0,97);st.star=true}
+  G.try={pool,picked:[],info:q,searches:0};G.screen='tryouts';render()}
+/* ---- recruiting: what drives prospect quality ---- */
+const REPN=[[85,'Powerhouse'],[65,'Renowned'],[45,'Respected'],[25,'Local name'],[0,'Unknown']];
+function clubRep(){const S=G.s;return S.rep==null?(userLg()==='prem'?45:30):S.rep}
+const repName=r=>REPN.find(x=>r>=x[0])[1];
+// Everything that shapes a tryout class: league level, club reputation (last seasons' finish and cup runs), the head scout, the Legend's Aura skill.
+function scoutInfo(){const S=G.s,lg=userLg(),rp=clubRep(),sc=S.staff.scout,stars=sc?sc.stars*(sk('network')?1.25:1):0,rf=(rp-40)/60;
+  const q={lg,rep:rp,repName:repName(rp),stars:sc?sc.stars:0,scout:sc?sc.name:null,lgBase:(lg==='prem'?57:44)+2,repBase:Math.round(rf*4*10)/10,repPot:Math.round(rf*5*10)/10,scBase:Math.round(stars*.4*10)/10,scPot:Math.round(stars*1.2*10)/10,legend:sk('legend')?6:0,fitChance:clamp(.4+stars*.08,0,.85)};
+  q.base=q.lgBase+q.repBase+q.scBase;q.pot=q.repPot+q.scPot+q.legend;return q}
+const fitsTeam=(p,t)=>isP(p)?TDEF[t.style.def].fit.includes(p.ps):TOFF[t.style.off].fit.includes(p.os)||TDEF[t.style.def].fit.includes(p.ds);
+// One prospect. Scouts look for players who suit the club's team styles: with chance q.fitChance they keep looking (up to 5 candidates) until one fits.
+function genProspect(pos,role,q,bonus=0){const t=UT(),want=R()<q.fitChance&&(isP({pos})?t.style.def!=='balanced':t.style.off!=='balanced'||t.style.def!=='balanced');let p;
+  for(let i=0;i<(want?5:1);i++){p=genPlayer(q.base+bonus,pos,ri(15,16),role);if(!want||fitsTeam(p,t))break}
+  p.pot=clamp(Math.round(p.pot+q.pot),Math.ceil(ovr(p))+1,97);return p}
+// Paid scouting trips during tryouts. Each adds prospects found further afield, slightly better than the local class.
+const SEARCH=[{n:'Regional search',cost:800,add:6,bonus:1},{n:'National search',cost:1800,add:6,bonus:2.5}];
+function widerSearch(){const S=G.s,T=G.try,o=T&&SEARCH[T.searches];if(!o||S.money<o.cost)return false;S.money-=o.cost;T.searches++;
+  for(let i=0;i<o.add;i++)T.pool.push(genProspect(i<2?'P':pick(POS),i<2?(i?'RP':'SP'):'',T.info,o.bonus));save();return true}
 function tryoutState(){const t=UT(),sel=G.try.pool.filter(p=>G.try.picked.includes(p.id)),all=t.roster.concat(sel),np=all.filter(isP).length,nb=all.length-np;
   return{n:all.length,np,nb,ok:all.length===16&&np>=4&&nb>=10,slots:16-t.roster.length}}
 function finishTryouts(auto){const t=UT();
