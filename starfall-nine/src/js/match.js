@@ -346,16 +346,16 @@ function vStart(e){const m=V.m;
     case'intro':{e.dur=2.8;setCam('fld');const pip=n=>'<i>'+'●'.repeat(n)+'</i><u>'+'●'.repeat(3-n)+'</u>',row=s=>{const o=teamFit(s.team,'off'),d=teamFit(s.team,'def');return`<span class="ts"><b style="color:${lum(s.team.c1)<.25?'#e9eef4':s.team.c1}">${esc(s.team.short)}</b></span><span class="ts">${esc(o.n)} ${o.id==='balanced'?'':pip(o.lvl)}</span><span class="ts">${esc(d.n)} ${d.id==='balanced'?'':pip(d.lvl)}</span>`};
       trans('Play ball',`<div class="tsg">${row(m.S[0])}${row(m.S[1])}</div>`,e.dur,true);break}
     case'batter':e.dur=V.cam==='pit'?.6:.85;setCam('pit');V.bat=e.pid;V.batL=isL(V.P[e.pid].p);V.b=V.s=0;V.anim=null;V.ballFx=null;V.plot=[];for(const id in V.zon)if(!m.z[id].on)delete V.zon[id];hud();break;
-    case'pitch':{setCam('pit');V.anim=null;const pit=V.P[V.pit[1-V.half]].p,ro=V.bases.some(b=>b);
+    case'pitch':{if(e.go){e.dur=.001;e.skip=true;break}setCam('pit');V.anim=null;const pit=V.P[V.pit[1-V.half]].p,ro=V.bases.some(b=>b);
       e.tW=.1;e.WD=ro?.74:.86;e.tR=e.tW+e.WD*.88;e.fl=clamp(.52*(86/(e.mph||86)),.4,.74)*(e.fx?1.3:1);e.tP=e.tR+e.fl;
       e.dur=e.res==='inplay'?e.tP+.03:e.go?e.tP+.16:e.tP+(e.res==='foul'?.62:.52);
       const J=rig(PO.pRel,{x:0,y:60.5,g:gz(0,60.5),yaw:Math.PI,mir:e.lhp});e.Rp=J.haR;
       e.E=[e.loc[0]*.83,.7,2.5+e.loc[1]*.9];e.Bk=[e.brk[0]/12*1.7,0,(e.brk[1]-3.5)/12*1.7];e.col=(PITCH[e.ty]||PITCH.FB).c;
       e.fd=[(R()<.5?-1:1)*(15+R()*50),-10-R()*30,25+R()*45];e.miss=(e.ty==='FB'?1:-1)*(.35+R()*.3);
       if(e.fx)V.ballFx=e.fx;V.lastPitch=e;break}
-    case'play':if(e.res==='K'){setCam('pit');e.dur=1.45;banner(e.looking?'Strike three':'Strikeout','k',1.3);tick(e.desc)}
-      else{V.anim=buildPlay(e);setCam('fld');e.dur=V.anim.dur;tick(e.desc)}break;
-    case'steal':V.anim=buildSteal(e);setCam('fld');e.dur=V.anim.dur;tick(e.desc);break;
+    case'play':if(e.res==='K'){setCam('pit');e.dur=1.45;banner(e.looking?'Strike three':'Strikeout','k',1.3);tick(e.desc);V.outs=Math.min(3,V.outs+1);hud()}
+      else{V.anim=buildPlay(e);setCam('fld');e.dur=V.anim.dur}break;
+    case'steal':V.anim=buildSteal(e);setCam('fld');e.dur=V.anim.dur;break;
     case'pick':V.anim=buildPick(e);setCam('fld');e.dur=V.anim.dur;tick(e.desc);break;
     case'zoneOn':e.dur=1.9;V.zon[e.pid]=e.k;cut(e.pid,'In the Zone',V.P[e.pid].p.name,ZK[e.k].n+' awakened',ZK[e.k].c,e.dur);shake(5);hud();break;
     case'ability':{e.dur=2.3;const a=ABIL[e.a];cut(e.pid,sn(V.P[e.pid].p),a.n,a.d,ZK[a.k].c,e.dur);shake(6);break}
@@ -364,13 +364,13 @@ function vStart(e){const m=V.m;
     case'end':e.dur=2;V.anim=null;setCam('fld');trans('Final',`${m.S[0].team.short} ${m.score[0]}  ·  ${m.S[1].team.short} ${m.score[1]}`,e.dur);break}}
 function vFinish(e){
   switch(e.t){
-    case'pitch':V.b=e.b;V.s=e.s;hud();break;
+    case'pitch':if(!e.skip){V.b=e.b;V.s=e.s;hud()}break;
     case'play':V.outs=e.outs;V.bases=e.bases;V.score=e.score.slice();V.anim=null;V.b=V.s=0;hud();break;
     case'steal':case'pick':V.outs=e.outs;V.bases=e.bases;V.anim=null;hud();break;
     case'half':V.half=e.half;V.inn=e.inn;V.outs=0;V.bases=e.bases;V.bat=null;V.b=V.s=0;hud();break;
     case'end':vEnd();break}}
 function vEnd(){const m=V.m;V.run=false;V=null;finishDay(m)}
-function pitchFx(e){const t=V.et;
+function pitchFx(e){const t=V.et;if(e.skip)return;
   if(!e.rel&&t>=e.tR){e.rel=true;const pi=$('pinfo');if(pi){pi.innerHTML=`<i style="background:${e.col}"></i><b>${PNAME[e.ty]||'Pitch'}</b><span>${e.mph} mph</span>`;pi.className='pinfo on'}
     if(e.go)pop('RUNNER GOES!',[0,30,7.5],'#f2c14e',1.1)}
   if(e.done||t<e.tP)return;e.done=true;const E=e.E,mitt=[E[0],-2.6,Math.max(.8,E[2]-.25)];
@@ -387,131 +387,94 @@ Object.assign(A,{
   apr(){if(!V)return;const m=V.m;m.approach=m.approach===1?-1:m.approach+1;$('aprv').textContent=({'-1':'Patient',0:'Balanced',1:'Aggressive'})[m.approach]},
   pen(){if(!V)return;const m=V.m,us=m.S[0].user?m.S[0]:m.S[1];if(!us.pen.length)return tick('The bullpen is empty.');m.wantChange=true;tick('Bullpen call made. The reliever comes in before your next batter faced.')}
 });
-/* ---------- play choreography: turns an engine event into ball segments, fielder moves, runner timelines and timed effects ---------- */
-function newAnim(e){const A={dur:1.5,ball:[],fld:{},run:[],fx:[],cam:[],fol:null,e,ump:null,keepBat:false};
+/* ---------- play playback: the engine has already simulated the play (e.sim, in real seconds and feet); this turns that timeline into what the cameras draw ---------- */
+const UMPS=[[0,-10],[82,68],[12,152],[-82,68]];// home, first, second, third
+function newAnim(e){const A={dur:1.5,ball:[],fld:{},run:[],fx:[],cam:[],e,ump:[],keepBat:false,home:null};
   A.FL=pos=>A.fld[pos]||(A.fld[pos]={pos,st:FPOS[pos].slice(),mv:[],act:[]});
-  A.mvF=(pos,to,t0,t1,maxv=42)=>{const f=A.FL(pos),lp=f.mv.length?f.mv[f.mv.length-1].to:f.st,d=d2(to,lp);t1=Math.max(t1,t0+.08);
-    if(!f.mv.length&&d>maxv*(t1-t0)){const k=maxv*(t1-t0)/d;f.st=[to[0]+(lp[0]-to[0])*k,to[1]+(lp[1]-to[1])*k]}f.mv.push({t0,t1,to:[to[0],to[1]]});return f};
+  A.mvF=(pos,to,t0,t1)=>{A.FL(pos).mv.push({t0,t1:Math.max(t1,t0+.08),to:[to[0],to[1]]})};
   A.act=(pos,t,k,face)=>A.FL(pos).act.push({t,k,face});
   A.at=(t,f)=>A.fx.push({t,f});
   A.thr=(t0,t1,a,b)=>A.ball.push({k:'thr',t0,t1,a:[a[0],a[1],5.4],b:[b[0],b[1],3.6],h:d2(a,b)*.026});
-  A.runner=(p,pts,t0,v)=>{const r={pid:p.id,p,pts,t0,v,slide:null,outT:null,atBase:false,seg:[],d:0};for(let i=1;i<pts.length;i++){const l=d2(pts[i],pts[i-1]);r.seg.push(l);r.d+=l}r.t1=t0+r.d/v;A.run.push(r);return r};
+  // a runner follows the legs the engine timed, rounding any base he runs through
+  A.runner=(pid,b,lead,ts,legs)=>{const p=V.P[pid].p,C=[0,63.64],B=BASEXY,un=(u,v)=>{const l=d2(u,v)||1;return[(v[0]-u[0])/l,(v[1]-u[1])/l]},r={pid,p,from:b,to:legs.length?legs[legs.length-1].to:b,legs:[],slide:null,outT:null,atBase:false,t0:ts,t1:ts,d:0};
+    let a=b?(()=>{const d=un(B[b],B[b+1]);return[B[b][0]+d[0]*lead,B[b][1]+d[1]*lead]})():[(V.batL?1:-1)*3.2,.75],tp=ts;
+    legs.forEach((L,i)=>{const e=B[L.to],d=un(a,e),pts=[a];if(i){const o=un(C,a);pts.push([a[0]+d[0]*16+o[0]*5,a[1]+d[1]*16+o[1]*5])}if(i<legs.length-1){const o=un(C,e);pts.push([e[0]-d[0]*22+o[0]*7,e[1]-d[1]*22+o[1]*7])}pts.push(e);
+      const seg=[];let len=0;for(let j=1;j<pts.length;j++){const l=d2(pts[j],pts[j-1]);seg.push(l);len+=l}r.legs.push({pts,seg,len,t0:tp,t1:Math.max(L.t,tp+.05),acc:r.d});r.d+=len;tp=L.t;a=e});
+    r.t1=tp;A.run.push(r);return r};
   return A}
-const callAt=(A,t,to,out,home)=>A.at(t,()=>{pop(out?'OUT!':'SAFE!',[to[0],to[1],7.5],out?'#ef5b5b':'#3ecf8e',1.15);if(home)A.ump={t:V.et,k:out?'punch':'safe'};shake(out?4:2)});
+function runAt(r,t){const n=r.legs.length;if(!n)return{x:0,y:0,dx:0,dy:1,rem:99,run:0,moving:false};let i=0;while(i<n-1&&t>=r.legs[i].t1)i++;const L=r.legs[i];let f=clamp((t-L.t0)/(L.t1-L.t0),0,1);if(!i)f=f*f*(3-2*f)*.3+f*.7;
+  let d=f*L.len,j=0;while(j<L.seg.length-1&&d>L.seg[j]){d-=L.seg[j];j++}const a=L.pts[j],b=L.pts[j+1],u=L.seg[j]?clamp(d/L.seg[j],0,1):1;
+  return{x:lerp(a[0],b[0],u),y:lerp(a[1],b[1],u),dx:b[0]-a[0],dy:b[1]-a[1],rem:i===n-1?(1-f)*L.len:99,run:L.acc+f*L.len,moving:t>r.t0&&t<r.t1}}
+function outCall(A,t,at,out,base,txt){A.at(t,()=>{pop(txt||(out?'OUT!':'SAFE!'),[at[0],at[1],7.5],out?'#ef5b5b':'#3ecf8e',1.2);if(out){V.outs=Math.min(3,V.outs+1);hud()}
+    let u=base===4?0:base>0?base:0;if(!base){let bd=1e9;UMPS.forEach((q,i)=>{const d=d2(q,at);if(i&&d<bd){bd=d;u=i}})}A.ump[u]={t:V.et,k:out?'punch':'safe'};shake(out?4:2)})}
 function buildPlay(e){
-  const A=newAnim(e),bs=e.side,bb=e.bb,B=b=>BASEXY[b],Pp=id=>V.P[id].p,box=[(V.batL?1:-1)*3.2,.75],runs={},fp=e.fpos;
-  for(const mv of e.moves){const p=Pp(mv.pid),pts=[mv.from===0?box:B(mv.from)];for(let b=mv.from+1;b<=mv.to;b++)pts.push(B(b));
-    const r=A.runner(p,pts,mv.from===0?.24:.12,RSPD(p));r.to=mv.to;r.from=mv.from;r.out=!!mv.out;runs[mv.pid]=r}
-  const bat=runs[e.pid],sa=bb?bb.spray*Math.PI/180:0,dir=[Math.sin(sa),Math.cos(sa)],L=bb?[dir[0]*bb.dist,dir[1]*bb.dist]:[0,0],type=e.type,of=fp&&OFS.includes(fp);
-  const cover=b=>b===1?'1B':b===3?'3B':b===4?'C':(sa<0?'2B':'SS'),bagAt=b=>{const p=B(b);return b===4?[0,1.5]:b===1?[p[0]-1.5,p[1]+.5]:b===3?[p[0]+1.5,p[1]+.5]:[p[0],p[1]-1.5]};
-  const retime=(r,t0,v)=>{r.t0=t0;r.v=v||r.v;r.t1=t0+r.d/r.v};
-  const big=(t,txt,cls)=>A.at(t,()=>banner(txt,cls,1.25));
-  // throw from a fielder to a base; a contested runner is timed around the ball's arrival so the call matches the engine
-  const throwTo=(pos,from,tb,tReady,o={})=>{const cv=cover(tb),to=B(tb),d=d2(from,to),v=o.v||THR+12;let tArr=tReady+d/v,r=e.thr&&e.thr.to===tb?runs[e.thr.pid]:null,out=r&&e.thr.out;
-    if(cv!==pos)A.mvF(cv,bagAt(tb),.25,clamp(tArr-.45,.7,1.7));
-    if(r){r.slide=R()<.45?'H':'F';if(out){r.t1=Math.max(r.t1,tArr+.1);r.outT=r.t1-.03;r.atBase=true}else tArr=Math.max(tArr,r.t1+.13)}
-    else if(o.safe){o.safe.slide=o.safe.slide||(R()<.5?'H':'F');tArr=Math.max(tArr,o.safe.t1+.16)}
-    if(cv===pos)return tArr;
-    A.act(pos,tArr-d/v,'throw',to);A.thr(tArr-d/v,tArr,from,to);A.act(cv,tArr,r||o.safe?'tag':'recv',from);
-    if(r)callAt(A,Math.max(tArr,r.t1)+.06,to,out,tb===4);
-    return tArr};
-  const fly=zc=>{const k=bb.kind,tl=Math.tan(bb.la*Math.PI/180),hgt=k==='P'?clamp(bb.dist*tl/4,48,95):clamp(bb.dist*tl/4,k==='L'?4:14,125),T=clamp(Math.max(Math.sqrt(8*hgt/32.2),bb.dist/(bb.ev*1.467*.8))/TC,.42,3.2);
-    A.ball.push({k:'air',t0:0,t1:T,a:[0,1.5,3],b:[L[0],L[1],zc],h:hgt});return T};
-  const ground=()=>{const gv=clamp(bb.ev*1.467*.6,48,122)*TC,tF=Math.max(.42,bb.dist/gv);A.ball.push({k:'roll',t0:0,t1:tF,a:[0,1.2,2.4],b:[L[0],L[1],.35],h:2.3,n:3});return tF};
-  const end=t=>{A.dur=Math.max(A.dur,t)};
-  switch(type){
-    case'BB':for(const r of A.run)retime(r,.3,r.v*.5);big(0,'Walk','sm');A.dur=1.7;break;
-    case'GO':case'E':case'1B':case'LO':case'FO':case'2B':case'3B':case'HR':break}
-  const gtype=type==='E'?e.ebase:type;
-  if(type!=='BB'&&bb){
-    if(gtype==='GO'||(type==='1B'&&e.ih)){
-      const tF=ground();A.mvF(fp,L,.08,tF-.02);A.act(fp,tF,e.dive?'dive':'field');if(e.dive)A.at(tF,()=>dust(L,12));
-      for(const q of ['SS','2B','3B'])if(q!==fp&&d2(FPOS[q],L)<60&&e.res!=='DP')A.mvF(q,[lerp(FPOS[q][0],L[0],.3),lerp(FPOS[q][1],L[1],.3)],.1,tF);
-      if(type==='E'){const P2=[L[0]+dir[0]*9+6,L[1]+dir[1]*9];A.ball.push({k:'roll',t0:tF,t1:tF+.7,a:[L[0],L[1],1.5],b:[P2[0],P2[1],.3],h:2,n:2});A.mvF(fp,P2,tF+.25,tF+.95);A.act(fp,tF+1,'field');big(tF+.1,'Error','sm');end(Math.max(tF+1.5,bat.t1+.5))}
-      else if(e.res==='DP'){const piv=cover(2),r1=A.run.find(r=>r.from===1&&r.out),tT=tF+.36;A.mvF(piv,bagAt(2),.1,Math.min(tF+.25,1.15));if(fp!=='1B')A.mvF('1B',bagAt(1),.1,1);else A.mvF('1B',bagAt(1),tT+.1,tT+.9);
-        A.act(fp,tT,'throw',B(2));const t2=tT+d2(L,B(2))/THR;A.thr(tT,t2,L,B(2));A.act(piv,t2,'recv',L);const tT2=t2+.3,t1=tT2+90/THR;A.act(piv,tT2,'throw',B(1));A.thr(tT2,t1,B(2),B(1));A.act('1B',t1,'recv',B(2));
-        if(r1){r1.t1=Math.max(r1.t1,t2+.12);r1.outT=t2;r1.atBase=true;r1.slide='F'}bat.t1=Math.max(bat.t1,t1+.12);bat.outT=t1;
-        A.at(t2+.04,()=>pop('OUT!',[0,127,7.5],'#ef5b5b',1));A.at(t1+.05,()=>{pop('OUT!',[B(1)[0],B(1)[1],7.5],'#ef5b5b',1.1);shake(3)});big(t1+.1,'Double play','');end(t1+1.25)}
-      else{const un=fp==='1B'&&d2(L,B(1))<50,cv=fp==='1B'?'P':'1B';let tT=tF+(e.dive?.85:.4),tA;
-        if(un){tA=tT+d2(L,B(1))/36;A.mvF('1B',bagAt(1),tF+.15,tA)}
-        else{A.mvF(cv,bagAt(1),.12,Math.max(1,tF+.2));tA=tT+d2(L,B(1))/THR;if(type==='1B'){tA=Math.max(tA,bat.t1+.13);tT=tA-d2(L,B(1))/THR}A.act(fp,tT,'throw',B(1));A.thr(tT,tA,L,B(1));A.act(cv,tA,'recv',L)}
-        if(type==='1B'){callAt(A,tA+.05,B(1),false);big(tA+.1,'Infield hit','sm');end(tA+1)}
-        else{bat.t1=Math.max(bat.t1,tA+.13);bat.outT=tA;callAt(A,tA+.05,B(1),true);end(tA+.95)}}
-      for(const r of A.run)if(!r.out&&r!==bat)end(r.t1+.45)}
-    else if(gtype==='FO'||gtype==='LO'){
-      const rob=e.robbed&&of,zc=rob?12.5:e.dive?1.7:gtype==='LO'?5:6.3,T=fly(zc),drop=type==='E';
-      A.mvF(fp,rob?[dir[0]*(bb.dist+1.5),dir[1]*(bb.dist+1.5)]:L,.1,T-.03,44);A.act(fp,T,rob?'jump':e.dive?'dive':'catch');
-      if(of){const o2=fp==='CF'?(sa<0?'LF':'RF'):'CF';A.mvF(o2,[lerp(FPOS[o2][0],L[0],.45),lerp(FPOS[o2][1],L[1],.45)],.15,T)}
-      if(drop){const P2=[L[0]+dir[0]*8+4,L[1]+dir[1]*8];A.ball.push({k:'roll',t0:T,t1:T+.6,a:[L[0],L[1],4],b:[P2[0],P2[1],.3],h:1.5,n:2});A.mvF(fp,P2,T+.2,T+.8);big(T+.1,'Error','sm');const tA=throwTo(fp,P2,2,T+1.2);end(Math.max(tA,bat.t1)+.6)}
-      else{bat.outT=T;if(e.dive&&!rob)A.at(T,()=>dust(L,10));
-        A.at(T+.02,()=>{if(rob||e.dive)shake(6)});if(rob)big(T+.05,'Robbed!','');else if(e.dive)big(T+.1,'What a catch','sm');
-        let tEnd=T+.85;const tb=e.thr?e.thr.to:e.res==='SF'?4:0;
-        for(const r of A.run)if(r!==bat)retime(r,T+.08);
-        if(tb){const tA=throwTo(fp,L,tb,T+(e.dive?.95:.45));tEnd=tA+.9;if(e.res==='SF')big(T+.2,'Sac fly','sm')}
-        for(const r of A.run)if(r!==bat)tEnd=Math.max(tEnd,r.t1+.5);end(tEnd)}
-      }
-    else if(type==='1B'||type==='2B'||type==='3B'){
-      let tL,Pk=L;
-      if(bb.kind==='G'){tL=bb.dist/(clamp(bb.ev*1.467*.62,62,125)*TC);A.ball.push({k:'roll',t0:0,t1:tL,a:[0,1.2,2.4],b:[L[0],L[1],.35],h:2.2,n:4});
-        const q=type==='1B'?(sa<-.5?'3B':sa<-.1?'SS':sa<.1?(R()<.5?'SS':'2B'):sa<.5?'2B':'1B'):(sa<0?'3B':'1B'),rq=Math.hypot(FPOS[q][0],FPOS[q][1]),Pq=[dir[0]*rq,dir[1]*rq],dq=d2(FPOS[q],Pq),tq=rq/bb.dist*tL*.8;
-        A.mvF(q,[lerp(FPOS[q][0],Pq[0],Math.max(0,1-5/dq)),lerp(FPOS[q][1],Pq[1],Math.max(0,1-5/dq))],.08,tq);A.act(q,tq,'dive');A.at(tq,()=>dust(Pq,8))}
-      else{const T=fly(0),rl=bb.kind==='L'?26:15;Pk=[L[0]+dir[0]*rl,L[1]+dir[1]*rl];A.at(T,()=>dust(L,5));A.ball.push({k:'roll',t0:T,t1:T+.5,a:[L[0],L[1],.3],b:[Pk[0],Pk[1],.3],h:2.6,n:2});tL=T+.5}
-      if(type!=='1B'){const rw=fenceR(sa)-5;if(rw>Math.hypot(Pk[0],Pk[1])+4){const W2=[dir[0]*rw,dir[1]*rw],t2=tL+d2(Pk,W2)/(58*TC);A.ball.push({k:'roll',t0:tL,t1:t2,a:[Pk[0],Pk[1],.3],b:[W2[0],W2[1],.3],h:1.2,n:3});Pk=W2;tL=t2}}
-      const st=A.FL(fp).st,tPk=Math.max(tL,.1+d2(st,Pk)/(31*TC));
-      if(tPk>tL+.05){const P3=[Pk[0]+dir[0]*5,Pk[1]+dir[1]*5];A.ball.push({k:'roll',t0:tL,t1:tPk,a:[Pk[0],Pk[1],.3],b:[P3[0],P3[1],.3],h:.5,n:1});Pk=P3}
-      A.mvF(fp,Pk,.1,tPk,60);A.act(fp,tPk,'field');
-      const o2=fp==='CF'?(sa<0?'LF':'RF'):'CF';A.mvF(o2,[lerp(FPOS[o2][0],Pk[0],.5),lerp(FPOS[o2][1],Pk[1],.5)],.15,tPk);
-      if(type==='3B'||(type==='2B'&&R()<.4))bat.slide=R()<.5?'H':'F';
-      const tb=e.thr?e.thr.to:type==='3B'?3:2,tA=throwTo(fp,Pk,tb,tPk+.45,{safe:!e.thr&&type!=='1B'?bat:null,v:THR+18});
-      if(type==='3B'&&!e.thr)callAt(A,tA+.05,B(3),false);
-      big(type==='1B'?tL*.7:tL*.6,type==='1B'?'Base hit':type==='2B'?'Double':'Triple',type==='1B'?'sm':'');
-      let tEnd=tA+.9;for(const r of A.run)tEnd=Math.max(tEnd,r.t1+.5);end(tEnd);
-      }
-    else if(type==='HR'){
-      const T=fly(bb.dist>fenceR(sa)+45?34:20),wl=fenceR(sa)-7;A.mvF(fp,[dir[0]*wl,dir[1]*wl],.15,T*.82,36);A.act(fp,T*.82+.3,'look');A.hr=true;
-      const tc=T+1.9,tail=44;// the camera is on the ball and the fireworks until tc; it comes back for the last steps of the trot
-      for(const r of A.run){if(r===bat){r.t0=.75;r.wp=[tc,r.d-tail];r.t1=tc+tail/25}else{r.t0=.5;r.t1=tc-.3}}
-      big(T*.72,e.runs===4?'Grand slam':'Home run','hr');
-      const W=[L[0],L[1],30];A.at(T,()=>{shake(e.runs===4?14:10);if(!RMO)V.flash=.5;spark(W,24,['#ffd23f','#fff'],30,{life:.6,sz:.5,g:14})});
-      for(let i=0;i<(e.runs===4?10:7);i++)A.at(T+.1+i*.24,()=>{if(!RMO)V.bursts.push({w:[L[0]*(.98+R()*.12)+(R()-.5)*120,L[1]*(.98+R()*.12),38+R()*50],t:0,d:1.15,r:20+R()*14,s:R()*6,col:['#ffd23f','#ff5c8a','#57c7ff','#3ecf8e','#ffffff','#ff8a3c'][i%6]})});
-      A.dur=bat.t1+.6;A.camHR=[{t:0,c:[0,24],r:48},{t:.35,r:70},{t:T,r:72},{t:T+1.5,r:80},{t:tc+.3,c:[-16,14],r:44},{t:bat.t1,c:[0,5],r:36}]}
-  }
-  // runs cross the plate
-  let sc=0;for(const r of A.run)if(r.to===4&&!r.out&&(type!=='HR'||r===bat)){A.at(r.t1,()=>{V.score[bs]=Math.min(e.score[bs],V.score[bs]+1);hud();pop('Run scores',[0,0,8.5],'#f2c14e',1);spark([0,0,2],10,'#f2c14e',14,{life:.5,sz:.2,g:10})});sc++}
-  if(type==='HR')A.at(A.dur-.05,()=>{V.score=e.score.slice();hud()});
-  A.cam=type==='BB'?[{t:0,c:[14,20],r:50}]:A.camHR||autoCam(A);
-  for(const s of A.ball)if(s.k==='roll'&&s.n>1&&s.h>1)for(let k=1;k<s.n;k++){const tt=s.t0+(s.t1-s.t0)*k/s.n;A.at(tt,()=>{const p=segPos(s,tt);dust([p[0],p[1],0],3)})}
-  for(const r of A.run)if(r.slide&&!r.dusted){r.dusted=true;A.at(Math.max(r.t0,r.t1-10/r.v),()=>{const p=runAt(r,V.et);dust([p.x,p.y,0],14)})}
+  const A=newAnim(e),S=e.sim,bs=e.side,k=1/TC,type=e.type,big=(t,txt,cls)=>A.at(t,()=>banner(txt,cls,1.25)),name=sn(V.P[e.pid].p);
+  if(!S){// walk: forced runners jog up a base; stay with it if a run is walked in
+    let tEnd=1.7;for(const mv of e.moves){const r=A.runner(mv.pid,mv.from,0,.3,[{to:mv.to,t:.3+(mv.to===4?2.6:3.4)}]);r.jog=true;if(mv.to===4){tEnd=3.3;A.home=[2.4,3.2];A.at(2.9,()=>{V.score[bs]=Math.min(e.score[bs],V.score[bs]+1);hud();pop('Run scores',[0,0,8.5],'#f2c14e',1.1)})}}
+    big(0,'Walk','sm');A.dur=tEnd;A.cam=[{t:0,c:[14,20],r:50}];tick(e.desc);return A}
+  for(const s of S.ball)A.ball.push(Object.assign({},s,{t0:s.t0*k,t1:s.t1*k,te:s.te!=null?s.te*k:null}));
+  for(const pos in S.fld){const f=S.fld[pos],F=A.FL(pos);F.st=f.st.slice();F.mv=f.mv.map(m=>({t0:m.t0*k,t1:m.t1*k,to:m.to}));F.act=f.act.map(a=>({t:a.t*k,k:a.k,face:a.face}))}
+  const air=A.ball[0],T=air.te!=null?air.te:air.t1,hr=S.hr,homeT=[];let bat=null,tDesc=1e9;
+  if(hr){const tc=T+1.9;A.hr=true;for(const q of S.run){const isB=q.b===0,n=4-q.b,t0=isB?.75:.5,te=isB?tc-.4:tc-.3,legs=[];for(let i=1;i<=n;i++)legs.push({to:q.b+i,t:isB&&i===n?tc+2.3:t0+(te-t0)*i/(isB?n-1:n)});const r=A.runner(q.pid,q.b,q.lead,t0,legs);r.jog=true;if(isB)bat=r}
+    big(T*.72,e.runs===4?'Grand slam':'Home run','hr');const L=air.b,W=[L[0],L[1],30];
+    A.at(T,()=>{shake(e.runs===4?14:10);if(!RMO)V.flash=.5;spark(W,24,['#ffd23f','#fff'],30,{life:.6,sz:.5,g:14})});
+    for(let i=0;i<(e.runs===4?10:7);i++)A.at(T+.1+i*.24,()=>{if(!RMO)V.bursts.push({w:[L[0]*(.98+R()*.12)+(R()-.5)*120,L[1]*(.98+R()*.12),38+R()*50],t:0,d:1.15,r:20+R()*14,s:R()*6,col:['#ffd23f','#ff5c8a','#57c7ff','#3ecf8e','#ffffff','#ff8a3c'][i%6]})});
+    A.at(bat.t1,()=>{V.score=e.score.slice();hud();pop(e.runs>1?e.runs+' runs score':'Run scores',[0,0,8.5],'#f2c14e',1.15);spark([0,0,2],12,'#f2c14e',14,{life:.5,sz:.2,g:10})});
+    A.dur=bat.t1+.7;A.cam=[{t:0,c:[0,24],r:48},{t:.35,r:70},{t:T,r:72},{t:T+1.5,r:80},{t:tc+.25,c:[-30,26],r:50},{t:bat.t1-.3,c:[0,6],r:36}];tDesc=T*.8}
+  else{for(const q of S.run){if(!q.legs.length)continue;const r=A.runner(q.pid,q.b,q.lead,q.ts*k,q.legs.map(L=>({to:L.to,t:L.t*k})));if(q.b===0)bat=r;
+      if(q.slide)r.slide=R()<.45?'H':'F';
+      if(q.out){r.outT=q.out.t*k;r.atBase=q.out.base>0&&Math.abs(r.outT-r.t1)<.12;if(q.out.base===4)homeT.push(r.outT);if(q.out.base>0&&!r.atBase&&r.outT<r.t1&&q.out.base===2)r.slide=r.slide||'F'}
+      else if(r.to===4){homeT.push(r.t1);A.at(r.t1,()=>{if(q.scored){V.score[bs]=Math.min(e.score[bs],V.score[bs]+1);hud();pop('Run scores',[0,0,8.5],'#f2c14e',1.1);spark([0,0,2],10,'#f2c14e',14,{life:.5,sz:.2,g:10})}})}
+      if(r.slide)A.at(Math.max(r.t0,r.t1-.3),()=>{const p=runAt(r,V.et);dust([p.x,p.y,0],14)})}
+    let nOut=0;for(const c of S.calls){const t=c.t*k+.04,at=c.at||BASEXY[c.base||1];if(c.out)tDesc=Math.min(tDesc,t);
+      if(c.catch){outCall(A,t,at,true,0);const kd=e.bb.kind;big(t+.02,e.robbed?'Robbed!':e.dive?'What a catch':kd==='L'?'Line out':kd==='P'?'Pop out':'Fly out',e.robbed?'':'sm');if(e.dive||e.robbed)A.at(t,()=>{shake(6);dust(at,10)})}
+      else outCall(A,t+.03,at,c.out,c.base);
+      if(c.out)nOut++}
+    const lastOut=S.calls.filter(c=>c.out&&!c.catch).map(c=>c.t*k);
+    if(e.res==='DP')big(Math.max(...lastOut,0)+.12,'Double play','');else if(e.res==='SF')big(T+.5,'Sac fly','sm');
+    else if(type==='E')big(T+.1,'Error','sm');else if(e.thr&&e.thr.out)big(Math.max(...lastOut,0)+.15,e.thr.to===4?'Out at the plate':'Thrown out','');
+    else if(['1B','2B','3B'].includes(type)){const tl=A.ball.length>1&&A.ball[1].k==='roll'&&air.k==='air'?air.t1:e.ih?Math.max(...S.calls.map(c=>c.t*k),T):air.k==='roll'?T*.7:T;big(tl+.05,e.ih?'Infield hit':type==='1B'?'Base hit':type==='2B'?'Double':'Triple',type==='1B'?'sm':'');tDesc=Math.min(tDesc,tl)}
+    if(air.k==='air'&&air.te==null&&!hr)A.at(air.t1,()=>dust([air.b[0],air.b[1],0],5));
+    if(e.dive&&air.k==='roll')A.at(T,()=>dust([air.b[0],air.b[1],0],12));
+    A.dur=S.dur*k;for(const r of A.run)A.dur=Math.max(A.dur,(r.outT!=null?r.outT:r.t1)+.75);
+    A.cam=autoCam(A);if(homeT.length){homeT.sort((a,b)=>a-b);A.home=[Math.max(.5,homeT[0]-1.15),homeT[homeT.length-1]+.55];A.dur=Math.max(A.dur,A.home[1]+.35)}
+    if(tDesc>1e8)tDesc=T}
+  // while the ball is live the ticker says what was hit; the result goes up when it is decided
+  const kd=e.bb.kind,dir=DIRN[e.fpos]||'the field';tick(kd==='G'?`${name} hits a ground ball...`:kd==='L'?`${name} lines one towards ${dir}...`:kd==='P'?`${name} pops it up...`:`${name} lifts a fly ball to ${dir}...`);
+  A.at(Math.max(.25,tDesc),()=>tick(e.desc));
+  for(const s of A.ball)if(s.k==='roll'&&s.n>1&&s.h>1)for(let i=1;i<s.n;i++){const tt=s.t0+(s.t1-s.t0)*i/s.n;A.at(tt,()=>{const p=segPos(s,tt);dust([p[0],p[1],0],3)})}
   return A}
-function buildSteal(e){const A=newAnim(e),B=b=>BASEXY[b],tb=e.thr,main=e.runs[0];A.keepBat=true;let lead=null;
-  e.runs.forEach((mv,i)=>{const p=V.P[mv.pid].p,a=B(mv.from),b=B(mv.to),f0=clamp(.3+.14*(e.jump||.5),.25,.5),r=A.runner(p,[[lerp(a[0],b[0],f0),lerp(a[1],b[1],f0)],b],0,RSPD(p));r.to=mv.to;r.from=mv.from;r.out=!!mv.out;if(!i)lead=r;r.slide=i||tb?(R()<.4?'H':'F'):null});
-  const C=FPOS.C,tgt=B(tb||main.to);A.cam=[{t:0,c:[(C[0]+tgt[0])/2,(C[1]+tgt[1])/2],r:d2(C,tgt)/2+16},{t:.3,c:[(C[0]+tgt[0])/2,(C[1]+tgt[1])/2],r:d2(C,tgt)/2+12},{t:.8,c:tgt,r:34}];if(tb===2)A.act('P',.5,'duck');let tEnd=lead.t1+.8;
-  if(tb){const to=B(tb),cv=tb===2?(V.batL?'SS':'2B'):'3B',d=d2(C,to),v=THR+8,tT=.36;let tA=tT+d/v;A.mvF(cv,tb===2?[to[0],to[1]-1.5]:[to[0]+1.5,to[1]+.5],0,Math.min(.75,tA-.15));
-    if(e.ok)tA=Math.max(tA,lead.t1+(e.close?.05:.18));else{lead.t1=Math.max(lead.t1,tA+(e.close?.06:.14));lead.outT=lead.t1-.03;lead.atBase=true}
-    A.act('C',tA-d/v,'throw',to);A.thr(tA-d/v,tA,C,to);A.act(cv,tA,'tag',C);callAt(A,Math.max(tA,lead.t1)+.07,to,!e.ok);
-    A.at(Math.max(tA,lead.t1)+.12,()=>banner(e.ok?'Stolen base':'Caught stealing',e.ok?'sm':'',1.15));tEnd=Math.max(tA,lead.t1)+1.05}
+// A steal is shown whole from the field camera: the pitcher's delivery, the runner's jump, the catcher's throw and the tag.
+function buildSteal(e){const A=newAnim(e),B=b=>BASEXY[b],tb=e.thr,S=e.sim,k=1/TC,pe=e.pitch,del=S.del*k,rel=S.rel*k,C=FPOS.C,M=[0,56];A.keepBat=true;let lead=null;
+  e.runs.forEach((mv,i)=>{const r=A.runner(mv.pid,mv.from,mv.lead,mv.ts*k,[{to:mv.to,t:mv.t1*k}]);r.out=!!mv.out;if(!i)lead=r;r.slide=i||tb?(R()<.4?'H':'F'):null;A.at(Math.max(0,r.t1-.3),()=>{if(r.slide){const p=runAt(r,V.et);dust([p.x,p.y,0],14)}})});
+  A.act('P',0,'pitch');A.FL('P').wd=rel/.88;A.ball.push({k:'thr',t0:rel,t1:del,a:[M[0],M[1],6],b:[C[0],C[1]+1.5,2.6],h:.5});
+  A.at(rel,()=>{const pi=$('pinfo');if(pi&&pe){pi.innerHTML=`<i style="background:${(PITCH[pe.ty]||PITCH.FB).c}"></i><b>${PNAME[pe.ty]||'Pitch'}</b><span>${pe.mph} mph</span>`;pi.className='pinfo on'}});
+  A.at(lead.t0+.02,()=>pop('Runner goes!',[lead.legs[0].pts[0][0],lead.legs[0].pts[0][1],8],'#f2c14e',1));
+  A.at(del,()=>{if(pe){V.b=pe.b;V.s=pe.s;V.plot.push({x:pe.loc[0],z:pe.loc[1],res:pe.res,ty:pe.ty,n:pe.n});hud();pop(pe.res==='ball'?'Ball':'Strike',[0,0,8],pe.res==='ball'?'#4aa8ff':'#ef5b5b',.9)}});
+  const tgt=B(tb||lead.to),mid=[(C[0]+tgt[0])/2,(C[1]+tgt[1])/2];A.cam=[{t:0,c:mid,r:d2(C,tgt)/2+14},{t:del,c:mid,r:d2(C,tgt)/2+10},{t:del+.55,c:tgt,r:34}];let tEnd=lead.t1+.8;
+  if(tb){const to=B(tb),cv=tb===2?(V.batL?'SS':'2B'):'3B',tT=S.tT*k,tA=S.tA*k;A.mvF(cv,tb===2?[to[0],to[1]-1.5]:[to[0]+1.5,to[1]+.5],rel,Math.max(rel+.5,tA-.25));if(tb===2)A.act('P',del+.25,'duck');
+    if(!e.ok){lead.outT=Math.max(lead.t1,tA)-.02;lead.atBase=true}
+    A.act('C',tT,'throw',to);A.thr(tT,tA,C,to);A.act(cv,tA,'tag',C);outCall(A,Math.max(tA,lead.t1)+.07,to,!e.ok,tb);
+    A.at(Math.max(tA,lead.t1)+.14,()=>banner(e.ok?'Stolen base':'Caught stealing',e.ok?'sm':'',1.15));tEnd=Math.max(tA,lead.t1)+1.05}
   else A.at(lead.t1,()=>banner('Stolen base','sm',1.1));
-  for(const r of A.run){if(r.slide)A.at(Math.max(0,r.t1-10/r.v),()=>{const p=runAt(r,V.et);dust([p.x,p.y,0],14)});tEnd=Math.max(tEnd,r.t1+.6)}
-  A.dur=tEnd;return A}
-function buildPick(e){const A=newAnim(e),b1=BASEXY[1],b2=BASEXY[2],p=V.P[e.pid].p,ld=[lerp(b1[0],b2[0],.13),lerp(b1[1],b2[1],.13)],M=FPOS.P,tT=.4,tA=tT+d2(M,b1)/THR;A.keepBat=true;
-  const r=A.runner(p,[ld,b1],.3,RSPD(p)*.8);r.to=1;r.from=1;r.slide='H';r.out=e.out;if(e.out){r.t1=tA+.12;r.outT=tA+.08;r.atBase=true}else r.t1=tA-.07;
-  A.mvF('1B',[b1[0]-1.5,b1[1]+.5],0,.35);A.act('P',tT,'throw',b1);A.thr(tT,tA,M,b1);A.act('1B',tA,'tag',M);callAt(A,tA+.1,b1,e.out);A.at(r.t0+.1,()=>dust([lerp(ld[0],b1[0],.5),lerp(ld[1],b1[1],.5),0],10));
+  for(const r of A.run)tEnd=Math.max(tEnd,r.t1+.6);A.dur=tEnd;tick(`${sn(lead.p)} takes off for ${BASEN[lead.to]}...`);A.at(tb?Math.max(S.tA*k,lead.t1)+.1:lead.t1,()=>tick(e.desc));return A}
+function buildPick(e){const A=newAnim(e),b1=BASEXY[1],M=FPOS.P,tT=.4,tA=tT+d2(M,b1)/THR,ld=e.lead||11;A.keepBat=true;
+  const r=A.runner(e.pid,1,ld,.3,[{to:1,t:e.out?tA+.12:tA-.07}]);r.slide='H';r.out=e.out;if(e.out){r.outT=tA+.08;r.atBase=true}
+  const sp=r.legs[0].pts[0];A.mvF('1B',[b1[0]-1.5,b1[1]+.5],0,.35);A.act('P',tT,'throw',b1);A.thr(tT,tA,M,b1);A.act('1B',tA,'tag',M);outCall(A,tA+.1,b1,e.out,1);A.at(r.t0+.1,()=>dust([lerp(sp[0],b1[0],.5),lerp(sp[1],b1[1],.5),0],10));
   if(e.out)A.at(tA+.15,()=>banner('Picked off','',1.15));A.cam=[{t:0,c:[34,62],r:50},{t:tA,c:[54,63],r:34}];A.dur=tA+(e.out?1.2:.8);return A}
 // default direction: start on the plate, follow the ball, tighten on whoever ends up with it
 function autoCam(A){const K=[{t:0,c:[0,24],r:48}];let last=0;
-  for(const s of A.ball){const d=d2(s.a,s.b);if(s.k==='air')K.push({t:s.t0+.32,r:clamp(40+s.h*.36,44,76)},{t:Math.max(s.t0+.4,s.t1-.15),r:40});else if(s.k==='roll')K.push({t:Math.max(s.t0+.28,(s.t0+s.t1)/2),r:42});else K.push({t:s.t0+.06,r:clamp(30+d*.12,38,56)},{t:s.t1,r:33});last=Math.max(last,s.t1)}
+  for(const s of A.ball){const d=d2(s.a,s.b),t1=s.te!=null?s.te:s.t1;if(s.k==='air')K.push({t:s.t0+.32,r:clamp(40+s.h*.36,44,76)},{t:Math.max(s.t0+.4,t1-.15),r:40});else if(s.k==='roll')K.push({t:Math.max(s.t0+.28,(s.t0+s.t1)/2),r:42});else K.push({t:s.t0+.06,r:clamp(30+d*.12,38,56)},{t:s.t1,r:33});last=Math.max(last,t1)}
   K.push({t:last+.35,r:32});K.sort((a,b)=>a.t-b.t);return K}
 /* ---------- state sampling ---------- */
-function ballAt(A,t){let s=null;for(const g of A.ball){if(t<g.t0)break;s=g}if(!s||t>s.t1)return null;return segPos(s,t)}
+function ballAt(A,t){let s=null;for(const g of A.ball){if(t<g.t0)break;s=g}if(!s||t>(s.te!=null?s.te:s.t1))return null;return segPos(s,t)}
 function segPos(s,t){const f=clamp((t-s.t0)/(s.t1-s.t0),0,1);if(s.k==='roll'){const e=1-Math.pow(1-f,1.55);return[lerp(s.a[0],s.b[0],e),lerp(s.a[1],s.b[1],e),lerp(s.a[2],s.b[2],f)*(1-f)+.25+Math.abs(Math.sin(f*Math.PI*s.n))*s.h*(1-f)*(1-f)]}
   const e=s.k==='air'?1-Math.pow(1-f,1.12):f;return[lerp(s.a[0],s.b[0],e),lerp(s.a[1],s.b[1],e),lerp(s.a[2],s.b[2],f)+4*s.h*f*(1-f)]}
-function ballXY(A,t){let s=null;for(const g of A.ball){if(t<g.t0)break;s=g}if(!s)return A.ball.length?A.ball[0].a:[0,60];return segPos(s,Math.min(t,s.t1))}
-function runAt(r,t){let f=clamp((t-r.t0)/(r.t1-r.t0),0,1);f=f*f*(3-2*f)*.3+f*.7;if(r.wp)f=(t<r.wp[0]?r.wp[1]*clamp((t-r.t0)/(r.wp[0]-r.t0),0,1):r.wp[1]+(r.d-r.wp[1])*clamp((t-r.wp[0])/(r.t1-r.wp[0]),0,1))/r.d;let d=f*r.d,i=0;while(i<r.seg.length-1&&d>r.seg[i]){d-=r.seg[i];i++}const a=r.pts[i],b=r.pts[i+1],u=r.seg[i]?clamp(d/r.seg[i],0,1):1;
-  return{x:lerp(a[0],b[0],u),y:lerp(a[1],b[1],u),dx:b[0]-a[0],dy:b[1]-a[1],rem:(1-f)*r.d,run:f*r.d,moving:t>r.t0&&t<r.t1}}
-const ACTW={field:[.28,.2],catch:[.5,.35],dive:[.3,.75],jump:[.32,.4],throw:[.3,.35],recv:[.4,.2],tag:[.25,.6],duck:[.3,.6],look:[.6,3]};
+function ballXY(A,t){let s=null;for(const g of A.ball){if(t<g.t0)break;s=g}if(!s)return A.ball.length?A.ball[0].a:[0,60];return segPos(s,Math.min(t,s.te!=null?s.te:s.t1))}
+const ACTW={field:[.28,.2],catch:[.5,.35],dive:[.3,.75],jump:[.32,.4],throw:[.3,.35],recv:[.4,.2],tag:[.25,.6],duck:[.3,.6],look:[.6,3],pitch:[0,1.5]};
 function fldAt(f,t){let x=f.st[0],y=f.st[1],mov=false,dx=0,dy=0,dist=0;
   for(const m of f.mv){if(t<=m.t0)break;const u=clamp((t-m.t0)/(m.t1-m.t0),0,1),e=u*u*(3-2*u)*.4+u*.6,L=d2(m.to,[x,y]);if(L>.3){dx=m.to[0]-x;dy=m.to[1]-y}dist+=L*e;if(u<1&&L>1.5)mov=true;x=lerp(x,m.to[0],e);y=lerp(y,m.to[1],e)}
-  let act=null;for(const a of f.act){const w=ACTW[a.k];if(t>=a.t-w[0]&&t<=a.t+w[1])act=a}return{x,y,mov,dx,dy,dist,act}}
+  let act=null;for(const a of f.act){const w=ACTW[a.k];if(t>=a.t-w[0]&&t<=a.t+w[1])act=a}return{x,y,mov,dx,dy,dist,act,wd:f.wd}}
 /* ---------- per-frame scene assembly and drawing ---------- */
 const kitOf=(p,side,role)=>{const k=p.id+role;return V.kits[k]||(V.kits[k]=mkKit(p,side<2?V.col[side]:{c1:'#1b2130',c2:'#8c98a8'},side===1,role))};
 const mkFig=(p,side,role,x,y,yaw,po,o)=>Object.assign({p,x,y,g:0,z:0,yaw,mir:false,po,sc:V.cam==='pit'?1:FSC,bulk:V.cam==='pit'?1:1.22,kit:kitOf(p,side,role),zk:V.zon[p.id]},o);
@@ -576,20 +539,21 @@ function figFld(p,pos,st,bxy,A,t,side){let po=PO.ready,yaw=d2([st.x,st.y],bxy)>1
       case'dive':if(u<0){po=mixP(poseRun(st.dist/6.6*TAU),PO.dive,sstep(1+u/.3));z=1.3*Math.sin(Math.PI*clamp(1+u/.3,0,1))}else po=mixP(PO.dive,PO.ready,sstep((u-.45)/.3));break;
       case'jump':po=PO.jump;z=5.4*Math.sin(Math.PI*clamp((u+.32)/.72,0,1));break;
       case'throw':po=throwPose((u+.3)/.65);break;
+      case'pitch':po=pitchPose(u/(st.wd||.8));yaw=Math.PI;break;
       case'recv':po=mixP(PO.ready,PO.recv,u<0?sstep(1+u/.4):1-sstep(u/.2));break;
       case'tag':po=u<-.05?mixP(PO.ready,PO.recv,sstep(1+(u+.05)/.2)):mixP(PO.recv,PO.tag,sstep((u+.05)/.14)-sstep((u-.4)/.2));break}}
   else if(st.mov){po=poseRun(st.dist/6.6*TAU);yaw=Math.atan2(st.dx,st.dy)}
   else if(pos==='C'&&(!A||A.keepBat))po=PO.cCrouch;
   if(pos==='C'&&(!a||a.k!=='throw')&&!st.mov)yaw=0;
-  return mkFig(p,side,pos==='C'?'c':'f',st.x,st.y,yaw,po,{z,mir:pos==='P'&&isL(p)&&a&&a.k==='throw'})}
+  return mkFig(p,side,pos==='C'?'c':'f',st.x,st.y,yaw,po,{z,mir:pos==='P'&&isL(p)&&a&&(a.k==='throw'||a.k==='pitch')})}
 function drawFld(x,c){
   const m=V.m,A=V.anim,t=V.et,fs=1-V.half,bs=V.half,F=m.S[fs],figs=[],bxy=A?ballXY(A,t):[0,0],inA={};
   for(const pos of POS.concat('P')){const p=pos==='P'?V.P[V.pit[fs]].p:F.field[pos],st=A&&A.fld[pos]?fldAt(A.fld[pos],t):{x:FPOS[pos][0],y:FPOS[pos][1],mov:false,act:null,dist:0,dx:0,dy:0};figs.push(figFld(p,pos,st,bxy,A,t,fs))}
-  figs.push(mkFig(V.ump,2,'u',0,-10,0,A&&A.ump&&t-A.ump.t<.9?PO[A.ump.k]:PO.ump));
+  UMPS.forEach((q,i)=>{const sg=A&&A.ump[i];figs.push(mkFig(V.ump,2,'u',q[0],q[1],i?yawTo(q[0],q[1],BASEXY[i][0],BASEXY[i][1]):0,sg&&t-sg.t<.95?mixP(PO.stand,PO[sg.k],sstep((t-sg.t)/.12)):i?PO.stand:PO.ump))});
   if(A)for(const r of A.run){inA[r.pid]=1;let tt=t,al=1;if(r.outT!=null&&t>r.outT){tt=r.atBase?Math.min(t,r.t1):Math.min(t,r.outT+.35);al=1-clamp((t-r.outT-.5)/.45,0,1);if(al<=0)continue}
     const s=runAt(r,tt),isBat=r.from===0;let po,yaw=Math.atan2(s.dx,s.dy),role='r',mir=false;
     if(t<r.t0){if(isBat){po=PO.bFollow;role='b';mir=V.batL;yaw=V.batL?-Math.PI/2:Math.PI/2}else{po=PO.lead;yaw=yawTo(s.x,s.y,0,40)}}
-    else if(s.moving||tt<t){po=poseRun(s.run/6.6*TAU,A.e.type==='BB'||A.hr?.6:1);
+    else if(s.moving||tt<t){po=poseRun(s.run/6.6*TAU,r.jog?.6:1);
       if(r.slide&&s.rem<10)po=mixP(po,r.slide==='H'?PO.slideH:PO.slideF,sstep((10-s.rem)/4.5))}
     else if(r.slide&&t<r.t1+.5)po=r.slide==='H'?PO.slideH:PO.slideF;
     else if(r.slide)po=mixP(r.slide==='H'?PO.slideH:PO.slideF,PO.stand,sstep((t-r.t1-.5)/.3));
@@ -607,9 +571,12 @@ function frame(c,k,ex){const S=V.safe,r=k[2],pts=[[k[0]-r,k[1],0],[k[0]+r,k[1],0
   return{x:(x0+x1)/2,y:(y0+y1)/2,z:clamp(Math.min(S.w/(x1-x0),S.h/(y1-y0)),1,5)}}
 function camTarget(){const S=V.safe;if(V.cam==='pit')return{x:S.x+S.w/2,y:S.y+S.h/2,z:1+V.punch};
   const A=V.anim,t=V.et,e=V.cur;let k=[0,40,64],ex=null;
+  if(A&&A.home&&t>A.home[0]-.4&&t<A.home[1]+.3){// a runner is coming home: the plate has priority, widened to keep an incoming throw in frame
+    const w=Math.min(sstep((t-A.home[0]+.4)/.4),1),b=ballXY(A,t),sg=A.ball.find(s=>s.k==='thr'&&t>=s.t0&&t<=s.t1&&d2(s.b,[0,0])<8),near=sg?Math.min(1,d2(b,[0,0])/150):0;k=[lerp(0,b[0],near*.45),lerp(8,b[1],near*.45),34+near*30];
+    if(w<1){const K=A.cam,b2=K[0].c||b;k=[lerp(V.camK?V.camK[0]:b2[0],k[0],w),lerp(V.camK?V.camK[1]:b2[1],k[1],w),lerp(V.camK?V.camK[2]:48,k[2],w)]}return frame(V.camF,k,null)}
   if(A){const K=A.cam,b0=ballXY(A,t),sg=A.ball.find(s=>s.k==='thr'&&t>=s.t0&&t<=s.t1),b=sg?[lerp(b0[0],sg.b[0],.5),lerp(b0[1],sg.b[1],.5),b0[2]]:b0,at=q=>q.c||b;let i=0;while(i<K.length-1&&t>=K[i+1].t)i++;const a=K[i],n=K[i+1],p=at(a);
     if(!n)k=[p[0],p[1],a.r];else{const f=sstep((t-a.t)/Math.max(.01,n.t-a.t)),q=at(n);k=[lerp(p[0],q[0],f),lerp(p[1],q[1],f),lerp(a.r,n.r,f)]}
-    if(b[2]>8&&!(a.c&&(!n||n.c)))ex=[b[0],b[1],b[2]]}
+    if(b[2]>8&&!(a.c&&(!n||n.c)))ex=[b[0],b[1],b[2]];V.camK=k}
   else if(e&&(e.t==='half'||e.t==='end'||e.t==='intro')){const b=V.band;if(!V.land&&b.h<S.h*1.15)return{x:V.W/2,y:b.h<=S.h?b.y+b.h/2:b.y+S.h/2-4,z:1+t*.012};k=[0,150,255-t*8]}
   return frame(V.camF,k,ex)}
 function vDraw(dts){
