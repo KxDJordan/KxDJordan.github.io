@@ -81,22 +81,22 @@ function teamOvr(t){const b=t.roster.filter(p=>!isP(p)).map(ovr).sort((a,b)=>b-a
 // Batters carry p.os (offence) and p.ds (defence). Pitchers carry p.ps and p.pitches (repertoire, first = primary).
 // Teams carry t.style={off,def}. A style is "fit" when a player's style id is listed in the team style's fit array.
 const OSTYLE={
-contact:{n:'Contact Hitter',s:'CON',d:'Puts the ball in play. Fewer strikeouts and more line-drive singles, but less home run power.'},
-slugger:{n:'Power Slugger',s:'PWR',d:'Swings for the fences. More home runs and doubles, more strikeouts.'},
-patient:{n:'Patient Eye',s:'EYE',d:'Works deep counts. Draws more walks and runs up the pitch count.'},
-speedster:{n:'Speedster',s:'SPD',d:'Beats out infield hits, steals more often and takes the extra base.'},
-gap:{n:'Gap Hitter',s:'GAP',d:'Drives the ball into the alleys. More doubles and triples, runners score from first more often.'}};
+contact:{n:'Contact Hitter',s:'CON',d:'Puts the ball in play. Fewer strikeouts and more singles, but less home run power and fewer doubles.'},
+slugger:{n:'Power Slugger',s:'PWR',d:'Swings for the fences. More home runs and doubles, more strikeouts and more balls in the air.'},
+patient:{n:'Patient Eye',s:'EYE',d:'Works deep counts. Chases less, fouls off two-strike pitches, draws more walks and runs up the pitch count.'},
+speedster:{n:'Speedster',s:'SPD',d:'Beats out infield hits, steals far more often and rarely hits into double plays. Little home run power.'},
+gap:{n:'Gap Hitter',s:'GAP',d:'Drives the ball into the alleys. More doubles and triples, and runners score from first more often.'}};
 const DSTYLE={
-vacuum:{n:'Vacuum',s:'VAC',d:'Sure hands on the ground. More groundouts converted and fewer errors.'},
-acrobat:{n:'Acrobat',s:'ACR',d:'Diving stops and quick pivots. Turns more double plays and steals infield hits.'},
-ballhawk:{n:'Ballhawk',s:'HWK',d:'Reads the ball off the bat. Runs down drives in the gap that would be extra bases.'},
-rocket:{n:'Rocket Arm',s:'ARM',d:'Runners think twice. Fewer extra bases taken and more runners thrown out.'},
-general:{n:'Field General',s:'GEN',d:'Frames pitches and controls the running game. More called strikes, fewer steals against.'}};
+vacuum:{n:'Vacuum',s:'VAC',d:'Sure hands on the ground. Half as many errors, and takes away ground-ball singles in the hole.'},
+acrobat:{n:'Acrobat',s:'ACR',d:'Diving stops and quick pivots. Robs grounders and line drives and turns more double plays.'},
+ballhawk:{n:'Ballhawk',s:'HWK',d:'Reads the ball off the bat. Runs down gap drives and bloopers that would be hits.'},
+rocket:{n:'Rocket Arm',s:'ARM',d:'Runners think twice. Fewer extra bases taken, more runners thrown out and doubles held to singles. Behind the plate it shuts down steals.'},
+general:{n:'Field General',s:'GEN',d:'Frames borderline pitches into called strikes and controls the running game. Fewer steal attempts, more pickoffs.'}};
 const PSTYLE={
-flame:{n:'Flamethrower',s:'FLM',d:'Overpowering fastballs. More strikeouts, but more walks and the odd long ball.'},
-craft:{n:'Craftsman',s:'CRF',d:'Breaking balls and changes of speed. More swings and misses out of the zone and weak fly balls.'},
-ground:{n:'Groundballer',s:'GRD',d:'Heavy sinkers. More ground balls and double plays, very few home runs.'},
-painter:{n:'Painter',s:'PNT',d:'Lives on the corners. Fewer walks, more called strikes, efficient innings.'}};
+flame:{n:'Flamethrower',s:'FLM',d:'Overpowering fastballs. More swings and misses, but more pitches out of the zone and the odd long ball.'},
+craft:{n:'Craftsman',s:'CRF',d:'Breaking balls and changes of speed. Batters chase and miss out of the zone and lift weak fly balls.'},
+ground:{n:'Groundballer',s:'GRD',d:'Heavy sinkers. Many more ground balls and double plays and very few home runs, but fewer strikeouts.'},
+painter:{n:'Painter',s:'PNT',d:'Lives on the corners. More strikes, fewer walks and more called strikes, at the cost of a few swings and misses.'}};
 const PITCH={
 FB:{n:'Four-seam fastball',s:'FB',mph:[84,96],brk:[0,2],c:'#ffffff'},
 SI:{n:'Sinker',s:'SI',mph:[82,93],brk:[5,-6],c:'#ffb35c'},
@@ -108,26 +108,26 @@ SP:{n:'Splitter',s:'SP',mph:[76,86],brk:[1,-11],c:'#ff5c8a'}};// brk=[horizontal
 const PREP={flame:['FB','SL','SP','CT'],craft:['CU','CH','SL','FB'],ground:['SI','SL','CH','CT'],painter:['FB','CT','CH','CU']};
 const TOFF={
 balanced:{n:'Balanced Attack',d:'No special instructions. Every hitter plays his own game.',fit:[]},
-smallball:{n:'Small Ball',d:'Steal, hit-and-run and manufacture runs. Runners go more often and take extra bases.',fit:['speedster','contact']},
-bombers:{n:'Bash Brothers',d:'Sit on a pitch and drive it. More home runs and extra-base hits at the cost of strikeouts.',fit:['slugger','gap']},
-grinders:{n:'Grind It Out',d:'Take pitches and wear the starter down. More walks and the opposing pitcher tires sooner.',fit:['patient','contact']},
-linedrive:{n:'Line Drive Machine',d:'Use the whole field. More singles and doubles, fewer strikeouts.',fit:['contact','gap']}};
+smallball:{n:'Small Ball',d:'Steal, hit-and-run and manufacture runs. Runners go more often, take the extra base and stay out of double plays. A little less home run power.',fit:['speedster','contact']},
+bombers:{n:'Bash Brothers',d:'Sit on a pitch and drive it. More home runs and doubles at the cost of strikeouts.',fit:['slugger','gap']},
+grinders:{n:'Grind It Out',d:'Take pitches and wear the starter down. Fewer chases, longer at-bats and the opposing pitcher tires sooner.',fit:['patient','contact']},
+linedrive:{n:'Line Drive Machine',d:'Use the whole field. More hits and doubles and fewer strikeouts, but fewer home runs.',fit:['contact','gap']}};
 const TDEF={
 balanced:{n:'Standard Defence',d:'Straight-up positioning and no special pitching plan.',fit:[]},
-power:{n:'Power Pitching',d:'Attack hitters and chase the strikeout.',fit:['flame','craft','general']},
-groundpound:{n:'Ground and Pound',d:'Pitch to contact on the ground and turn two behind it.',fit:['ground','vacuum','acrobat']},
-nofly:{n:'No-Fly Zone',d:'Let them hit it in the air. The outfield runs everything down.',fit:['craft','painter','ballhawk']},
-lockdown:{n:'Lockdown',d:'Shut down the running game and give away nothing for free.',fit:['painter','rocket','general']}};
+power:{n:'Power Pitching',d:'Attack hitters and chase the strikeout. More swings and misses, slightly more walks.',fit:['flame','craft','general']},
+groundpound:{n:'Ground and Pound',d:'Pitch to contact on the ground and turn two behind it. More ground balls and double plays, fewer errors.',fit:['ground','vacuum','acrobat']},
+nofly:{n:'No-Fly Zone',d:'Let them hit it in the air. The outfield runs everything down, but a few more leave the park.',fit:['craft','painter','ballhawk']},
+lockdown:{n:'Lockdown',d:'Shut down the running game and give away nothing for free. Fewer steals and extra bases against, fewer walks and errors.',fit:['painter','rocket','general']}};
 function assignStyles(p){
   const r=p.r,w=(o)=>{let b=null,bv=-1e9;for(const k in o){const v=o[k]+gs()*5;if(v>bv){bv=v;b=k}}return b};
   if(isP(p)){
-    if(!PSTYLE[p.ps])p.ps=w({flame:r.vel*1.15-r.ctl*.2,craft:r.brk*1.15-r.vel*.2,ground:(r.brk+r.sta)*.52,painter:r.ctl*1.15-r.vel*.2});
+    if(!PSTYLE[p.ps])p.ps=w({flame:r.vel*1.15-r.ctl*.2,craft:r.brk*1.18-r.vel*.16,ground:(r.brk+r.sta)*.515,painter:r.ctl*1.15-r.vel*.2});
     if(!p.pitches||!p.pitches.length){const rep=PREP[p.ps],n=p.role==='RP'?2+(R()<.4?1:0):3+(R()<.35?1:0);p.pitches=[rep[0]].concat(shuffle(rep.slice(1))).slice(0,n)}
     p.os=p.os||'contact';p.ds=p.ds||'vacuum'}
   else{
-    if(!OSTYLE[p.os])p.os=w({contact:r.con*1.1-r.pow*.15,slugger:r.pow*1.15-r.con*.2,patient:r.eye*1.1-10,speedster:r.spd*1.1-r.pow*.15,gap:(r.con+r.pow)*.53});
+    if(!OSTYLE[p.os])p.os=w({contact:r.con*1.12-r.pow*.1,slugger:r.pow*1.15-r.con*.2,patient:r.eye*1.1-7,speedster:r.spd*1.08-r.pow*.15,gap:(r.con+r.pow)*.512});
     if(!DSTYLE[p.ds]){const of=OFS.includes(p.pos);
-      p.ds=p.pos==='C'?w({general:r.fld+8,rocket:r.arm}):of?w({ballhawk:r.fld+r.spd*.3-12,rocket:r.arm+4}):w({vacuum:r.fld,acrobat:r.fld*.6+r.spd*.4+2,rocket:r.arm-6})}}
+      p.ds=p.pos==='C'?w({general:r.fld+8,rocket:r.arm}):of?w({ballhawk:r.fld+r.spd*.3-12,rocket:r.arm-1}):w({vacuum:r.fld,acrobat:r.fld*.6+r.spd*.4+2,rocket:r.arm-11})}}
   return p}
 // [{k:'O'|'D'|'P',id,n,s,d}] for display. Pitchers show only their pitching style.
 function pStyles(p){return isP(p)?[{k:'P',id:p.ps,...PSTYLE[p.ps]}]:[{k:'O',id:p.os,...OSTYLE[p.os]},{k:'D',id:p.ds,...DSTYLE[p.ds]}]}
@@ -142,7 +142,8 @@ function teamFit(t,side){
   let lvl=0;for(const n of SYN_NEED)if(count>=n)lvl++;
   if(id==='balanced')lvl=0;
   return{id,side,n:def.n,d:def.d,fit:def.fit,count,total:pool.length,lvl,mult:id==='balanced'?0:SYN_MULT[lvl],next:lvl<3?SYN_NEED[lvl]:null,players:fits}}
-function autoTeamStyle(t){const best=(side,D)=>{let b='balanced',bv=2;for(const id in D){if(id==='balanced')continue;const c=teamFit({...t,style:{off:id,def:id}},side).count;if(c>bv){bv=c;b=id}}return b};
+function autoTeamStyle(t){const best=(side,D)=>{const c=Object.keys(D).filter(id=>id!=='balanced').map(id=>[id,teamFit({...t,style:{off:id,def:id}},side).count]),mx=Math.max(...c.map(e=>e[1]));
+    return mx<3?'balanced':pick(c.filter(e=>e[1]>=mx-1).map(e=>e[0]))};// AI clubs pick an identity their roster fits, with some variety between clubs
   t.style={off:best('off',TOFF),def:best('def',TDEF)}}
 // Save migration: fills in styles for players and teams created before play styles existed.
 function ensureStyles(S){if(!S||!S.teams)return S;const g=G.s;G.s=S;
@@ -151,12 +152,21 @@ function ensureStyles(S){if(!S||!S.teams)return S;const g=G.s;G.s=S;
   G.s=g;return S}
 const DIRN={LF:'left',CF:'center',RF:'right',SS:'short','2B':'second','3B':'third','1B':'first',P:'the mound',C:'the plate'};
 /* ================= MATCH ENGINE ================= */
+// Field geometry shared by the engine and the renderer. Feet, home plate at the origin, +y towards centre field, +x towards first base.
+const FPOS={P:[0,60.5],C:[0,-5],'1B':[62,84],'2B':[32,138],SS:[-36,136],'3B':[-60,84],LF:[-150,255],CF:[0,305],RF:[150,255]};
+const BASEXY=[[0,0],[63.64,63.64],[0,127.28],[-63.64,63.64],[0,0]];
+const fenceR=a=>330+70*Math.cos(2*a);// a = spray angle in radians, 0 = dead centre
+const SPRAY={P:0,C:0,'1B':33,'2B':13,SS:-13,'3B':-33,LF:-27,CF:0,RF:27};// degrees, -45 = left-field line
+const HARD={FB:1,SI:1,CT:1},GBB={FB:-.06,SI:.12,CT:.02,SL:0,CU:-.02,CH:.05,SP:.08},HRB={FB:1.08,SI:.8,CT:1,SL:1,CU:1,CH:1,SP:.92};
+const BASEN=['','first','second','third','home'];
+// Handedness is cosmetic plus the direction a pitch breaks. Derived from the id so old saves need no migration.
+const isL=p=>(parseInt(String(p.id).slice(1),10)||0)%(isP(p)?4:3)===0;
 class Match{
   constructor(away,home,o={}){
     this.o=o;this.z={};this.box={};this.S=[this.mk(away),this.mk(home)];
     this.score=[0,0];this.inn=1;this.half=0;this.outs=0;this.bases=[null,null,null];this.line=[[0],[]];this.done=false;
     this.approach=0;this.autoPen=true;this.wantChange=false;this.moments=[];this.halfRuns=0;
-    for(const s of this.S)for(const p of s.team.roster){this.z[p.id]={g:p.spirit*.3+(s.user&&sk('awakening')?10:0),on:0,used:false,fresh:false};this.box[p.id]={ab:0,h:0,hr:0,rbi:0,bb:0,k:0,r:0,po:0,pk:0,per:0,ph:0,pbb:0,np:0}}
+    for(const s of this.S)for(const p of s.team.roster){this.z[p.id]={g:p.spirit*.3+(s.user&&sk('awakening')?10:0),on:0,used:false,fresh:false};this.box[p.id]={ab:0,h:0,hr:0,rbi:0,bb:0,k:0,r:0,po:0,pk:0,per:0,ph:0,pbb:0,np:0,sb:0,cs:0,fx:0}}
   }
   mk(team){
     if(team.id!=='user'||!validLineup(team))autoLineup(team);
@@ -165,14 +175,16 @@ class Match{
     const sp=by(team.starterPick)||pickStarter(team);
     const pen=team.roster.filter(p=>isP(p)&&p!==sp).sort((a,b)=>(a.fatigue-b.fatigue)||(ovr(b)-ovr(a)));
     const field={};lineup.forEach(l=>{if(l.pos!=='DH')field[l.pos]=l.p});
-    return{team,lineup,field,pit:sp,starter:sp,pen,bi:0,user:team.id===this.o.user,pitUsed:[sp],capt:lineup.some(l=>has(l.p,'captain'))}
+    for(const p of team.roster)if(isP(p)?!PSTYLE[p.ps]:!OSTYLE[p.os])assignStyles(p);
+    const to=teamFit(team,'off'),td=teamFit(team,'def');
+    return{team,lineup,field,pit:sp,starter:sp,pen,bi:0,user:team.id===this.o.user,pitUsed:[sp],capt:lineup.some(l=>has(l.p,'captain')),to:{id:to.id,m:to.mult},td:{id:td.id,m:td.mult}}
   }
   fm(p,s){return 1-p.fatigue*.003*(s.user&&sk('teamtalk')?.75:1)}
   fld(s,pos){const p=pos==='P'?s.pit:s.field[pos];let v=p.r.fld*this.fm(p,s);if(p.pos!==pos)v-=pos==='C'?25:12;if(has(p,'goldglove'))v+=10;if(this.z[p.id].on)v+=20;return v}
   arm(s,pos){const p=s.field[pos];return p.r.arm*this.fm(p,s)+(has(p,'cannon')?12:0)+(this.z[p.id].on?15:0)}
   defAvg(s){let t=0;for(const pos of POS)t+=this.fld(s,pos);return t/8}
   pst(s){const p=s.pit,z=this.z[p.id],bx=this.box[p.id];
-    const lim=35+p.r.sta*.6+(s.user&&sk('pitchlab')?8:0)+(has(p,'workhorse')?10:0),tired=Math.max(0,bx.np-lim)*.5;
+    const lim=35+p.r.sta*.6+(s.user&&sk('pitchlab')?8:0)+(has(p,'workhorse')?10:0),tired=Math.max(0,bx.np+bx.fx-lim)*.5;
     let add=-tired;if(z.on)add+=12;if(has(p,'ace')&&this.inn<=3&&p===s.starter)add+=6;if(s.user&&sk('bullpen')&&p!==s.starter)add+=5;if(s.user&&sk('scouting'))add+=2;
     const f=this.fm(p,s),o={vel:p.r.vel*f+add,ctl:p.r.ctl*f+add,brk:p.r.brk*f+add,lim,tired};
     if(has(p,'iceveins')&&this.bases.some(b=>b))o.ctl+=10;return o}
@@ -190,16 +202,76 @@ class Match{
   gF(p,s,a,ev){if(!isP(p))this.gain(p,s,a*(abil(p).k==='D'?1:.35),ev)}
   tick(p){const z=this.z[p.id];if(!z.on)return;if(z.fresh){z.fresh=false;return}if(--z.on<=0){z.on=0;z.g=0}}
   ids(){return this.bases.map(b=>b?b.id:null)}
+  rspd(r){return r.r.spd+(has(r,'roadrunner')?10:0)}
   maybeChange(F,fi,ev){if(!F.pen.length)return;const px=this.box[F.pit.id],ps=this.pst(F);
     const cond=(ps.tired>4||(px.per>=4&&px.np>25))&&!this.z[F.pit.id].on;
     if(F.user?(this.wantChange||(this.autoPen&&cond)):cond){const np=F.pen.shift();F.pit=np;F.pitUsed.push(np);this.wantChange=false;ev.push({t:'change',side:fi,pid:np.id})}}
-  trySteal(B,F,bi,ev){const r=this.bases[0];if(!r||this.bases[1])return false;
-    const gl=B.user&&sk('greenlight'),spd=r.r.spd+(has(r,'roadrunner')?10:0);
-    if(R()>=(spd-55)*.004+(gl?.05:0)+(B.user?this.approach*.03:0))return false;
-    const ok=R()<clamp(.7+(spd-50)*.006-(this.arm(F,'C')-50)*.006+(gl?.08:0),.3,.95);
-    if(ok)this.bases=[null,r,this.bases[2]];else{this.bases=[null,null,this.bases[2]];this.outs++;this.box[F.pit.id].po++}
-    ev.push({t:'steal',pid:r.id,ok,side:bi,outs:this.outs,bases:this.ids(),desc:sn(r)+(ok?' steals second!':' is thrown out stealing.')});
-    if(!ok)this.gF(F.field.C,F,16,ev);else this.gB(r,B,8,ev);return true}
+  /* ---- running game ---- */
+  // Decides at the start of a plate appearance whether a runner will go, and on which pitch.
+  stealPlan(B,F){const [a,c,d]=this.bases;let r,from;if(a&&!c){r=a;from=1}else if(c&&!d){r=c;from=2}else return null;
+    const spd=this.rspd(r),cat=F.field.C,gl=B.user&&sk('greenlight');
+    let p=(spd-44)*.0085*(from===2?.3:d?.75:1);
+    if(r.os==='speedster')p*=1.55;if(B.to.id==='smallball')p*=1+B.to.m;if(cat.ds==='general')p*=.78;if(cat.ds==='rocket')p*=.8;if(F.td.id==='lockdown')p*=1-.4*F.td.m;
+    if(this.outs===2)p*=1.15;p+=(gl?.05:0)+(B.user?this.approach*.03:0);
+    return R()<clamp(p,0,.6)?{r,from,n:R()<.5?1:R()<.6?2:3}:null}
+  doSteal(B,F,bi,pl,ev){const r=pl.r,from=pl.from,[a,c,d]=this.bases,cat=F.field.C,gl=B.user&&sk('greenlight'),spd=this.rspd(r);
+    const jump=clamp(.5+gs()*.35,0,1),dbl=from===2&&a?a:null,thr=!(from===1&&d&&R()<.5);
+    const pOK=clamp(.725+(spd-50)*.006-(this.arm(F,'C')-50)*.006+(jump-.5)*.16+(gl?.08:0)+(r.os==='speedster'?.03:0)+(B.to.id==='smallball'?.06*B.to.m:0)
+      -(cat.ds==='general'?.04:0)-(cat.ds==='rocket'?.1:0)-(F.td.id==='lockdown'?.1*F.td.m:0)-(from===2?.03:0),.3,.95);
+    const roll=R(),ok=!thr||roll<pOK,close=thr&&Math.abs(roll-pOK)<.14,to=from+1,runs=[{pid:r.id,from,to,out:!ok}];
+    const nb=[a,c,d];nb[from-1]=null;if(ok)nb[to-1]=r;else{this.outs++;this.box[F.pit.id].po++}
+    if(dbl){nb[0]=null;nb[1]=dbl;runs.push({pid:dbl.id,from:1,to:2,out:false});this.box[dbl.id].sb++}
+    this.bases=nb;this.box[r.id][ok?'sb':'cs']++;
+    const n=sn(r),desc=!thr?`${n} takes second. No throw.`:dbl?(ok?`Double steal! ${n} and ${sn(dbl)} both move up.`:`${n} is cut down at third on the double steal.`):ok?`${n} steals ${BASEN[to]}${close?' just ahead of the tag':''}!`:`${n} is thrown out stealing ${BASEN[to]}.`;
+    ev.push({t:'steal',pid:r.id,ok,side:bi,runs,thr:thr?to:0,close,jump,outs:this.outs,bases:this.ids(),desc});
+    if(!ok)this.gF(cat,F,16,ev);else this.gB(r,B,8,ev)}
+  tryPick(B,F,bi,ev){const r=this.bases[0];if(!r||this.bases[1])return;const spd=this.rspd(r),cat=F.field.C;
+    if(R()>=(spd>58||r.os==='speedster'?.07:.02))return;
+    const out=R()<clamp(.07+(cat.ds==='general'?.03:0)+(F.td.id==='lockdown'?.06*F.td.m:0)+(r.os==='speedster'?.02:0),0,.25);
+    if(out){this.bases[0]=null;this.outs++;this.box[F.pit.id].po++;this.box[r.id].cs++}
+    ev.push({t:'pick',pid:r.id,side:bi,base:1,out,outs:this.outs,bases:this.ids(),desc:out?`${sn(r)} is picked off first!`:`${sn(F.pit)} throws over. ${sn(r)} dives back safely.`})}
+  /* ---- pitches ---- */
+  pickPitch(pit,ps,b,s){const rep=pit.pitches&&pit.pitches.length?pit.pitches:['FB'],W=[.5,.26,.16,.08];let tot=0;const w=[];
+    for(let i=0;i<rep.length;i++){let v=W[i]||.05;const h=HARD[rep[i]];
+      if(s===2&&!h)v*=1.6;if(b-s>=2&&i===0)v*=1.9;if(ps.tired>2&&i===0)v*=1.4;if(pit.ps==='flame'&&h)v*=1.2;if(pit.ps==='craft'&&!h)v*=1.25;w.push(v);tot+=v}
+    let r=R()*tot,i=0;for(;i<w.length-1;i++)if((r-=w[i])<0)break;return rep[i]}
+  // Builds the pitch event: type, speed, break and a location that agrees with the result.
+  // loc/tgt are in strike-zone units from the catcher's view: |x|<=1 and |z|<=1 is a strike, +x is the first-base side, +z is up.
+  pitchEv(d,pit,ps,b,s,n){const P=PITCH[d.ty]||PITCH.FB,lh=isL(pit),sg=lh?-1:1,hard=HARD[d.ty],u=R,
+      mph=Math.round(lerp(P.mph[0],P.mph[1],clamp((ps.vel-25)/62,0,1.08))+gs()*1.2),bk=.75+clamp(ps.brk,20,100)*.006;
+    let x,z;const vb=hard?(d.ty==='SI'?-.15:.2):-.3;
+    if(d.frame){if(u()<.6){x=(u()<.5?-1:1)*(.94+u()*.06);z=clamp(vb+(u()-.5)*1.5,-.9,.9)}else{z=-(.94+u()*.06);x=(u()-.5)*1.7}}
+    else if(d.inZ){x=(u()-.5)*1.84;z=clamp((u()-.5)*1.84+vb*.6,-.93,.93);
+      if(pit.ps==='painter'&&u()<.6){if(u()<.5)x=(u()<.5?-1:1)*(.7+u()*.25);else z=(u()<.4?1:-1)*(.7+u()*.25)}
+      if(d.res==='called'&&u()<.5){if(u()<.6)x=(x<0?-1:1)*(.6+u()*.36);else z=(z<0?-1:1)*(.6+u()*.36)}}
+    else{const far=d.res==='ball'?1.08+u()*u()*1.1:1.05+u()*.42,side=-sg*(hard?(u()<.5?1:-1):(u()<.75?1:-1)),k=u();
+      if(k<.45){x=(u()-.5)*1.7;z=(hard&&d.ty!=='SI'?(u()<.7?1:-1):(u()<.88?-1:1))*far}
+      else if(k<.82){x=side*far;z=clamp((u()-.5)*1.7+vb*.5,-.95,.95)}
+      else{x=side*(1.02+u()*.5);z=(hard&&d.ty!=='SI'?1:-1)*far}}
+    const tx=clamp(x*.8,-.85,.85)+(u()-.5)*.2,tz=clamp(z*.75,-.85,.85)+(u()-.5)*.2;
+    return{t:'pitch',res:d.res,b,s,fx:null,ty:d.ty,mph,loc:[+x.toFixed(3),+z.toFixed(3)],tgt:[+tx.toFixed(3),+tz.toFixed(3)],brk:[+(-sg*P.brk[0]*bk).toFixed(1),+(P.brk[1]*bk).toFixed(1)],n,pc:this.box[pit.id].np,lhp:lh,sw:!!d.sw,go:!!d.go,frame:!!d.frame}}
+  /* ---- batted balls ---- */
+  // kind G(rounder) L(iner) F(ly) P(op-up); ev = exit velocity mph; la = launch angle deg; spray deg (-45 left-field line .. +45 right-field line); dist = feet from the plate to where the ball lands or is fielded.
+  bbGen(type,fpos,kind,pow,o={}){const j=n=>(R()-.5)*2*n,fd=pos=>Math.hypot(FPOS[pos][0],FPOS[pos][1]),of=OFS.includes(fpos),sgn=fpos==='LF'?-1:fpos==='RF'?1:(R()<.5?-1:1);
+    let la,ev=0,spray=SPRAY[fpos]||0,dist;
+    const fen=()=>fenceR(spray*Math.PI/180);
+    switch(type){
+      case'GO':kind='G';spray+=j(o.dive?9:5);la=ri(-14,5);ev=ri(70,99);dist=fpos==='P'?52+j(5):fd(fpos)+j(o.dive?4:9)-(o.ih?22:0);if(o.ih)ev=ri(52,68);break;
+      case'LO':kind='L';spray+=j(o.dive?9:4);la=ri(8,15);ev=ri(88,105);dist=fd(fpos)+j(5);break;
+      case'FO':if(of){kind='F';spray+=j(o.dive?15:11);la=ri(27,46);dist=o.rob?fen()-5:clamp(fd(fpos)+j(55)+(o.dive?-30:10),205,fen()-16)}
+        else{kind='P';spray+=j(8);la=ri(56,74);dist=fd(fpos)+j(14);ev=ri(60,80)}break;
+      case'1B':if(!of){kind='G';spray+=j(6);la=ri(-10,2);ev=ri(52,70);dist=fd(fpos)-18+j(6);break}
+        if(kind==='G'){spray=fpos==='CF'?j(4):sgn*(R()<.85?22+j(3):41+j(2));la=ri(-8,6);ev=ri(88,106);dist=175+R()*45}
+        else if(kind==='L'){spray=clamp(spray+j(13),-42,42);la=ri(9,18);dist=165+R()*60}
+        else{spray=clamp(spray+j(13),-42,42);la=ri(28,40);dist=160+R()*42}break;
+      case'2B':if(R()<.3){spray=sgn*(40+R()*3.5);kind=kind==='G'?'G':'L';la=kind==='G'?ri(2,8):ri(12,20);dist=235+R()*65}
+        else{spray=fpos==='CF'?sgn*(13+R()*5):sgn*(13+R()*7);kind=kind==='G'?'L':kind;la=kind==='L'?ri(14,22):ri(23,32);dist=clamp(285+R()*90,270,fen()-8)}
+        if(kind==='G')ev=ri(96,108);break;
+      case'3B':spray=R()<.35?sgn*(40.5+R()*3):sgn*(14+R()*6);kind=kind==='F'?'F':'L';la=kind==='L'?ri(15,22):ri(23,30);dist=fen()-ri(4,28);break;
+      case'HR':kind='F';spray=clamp(spray+j(15),-43.5,43.5);la=ri(23,37);dist=fen()+12+R()*R()*85+clamp((pow-50)*.6,-8,30);break;
+      default:return null}
+    if(!ev){const s2=Math.sin(2*la*Math.PI/180);ev=Math.round(clamp(Math.sqrt(Math.max(dist,60)*32.2/(Math.max(.25,s2)*.72))/1.467,58,119))}
+    return{kind,ev,la,spray:+spray.toFixed(1),dist:Math.round(dist)}}
   endHalf(ev){
     const fi=1-this.half,F=this.S[fi];if(this.halfRuns===0)this.gain(F.pit,F,10,ev);
     this.outs=0;this.bases=[null,null,null];this.halfRuns=0;
@@ -213,82 +285,133 @@ class Match{
     const ev=[];if(this.done)return ev;
     const bi=this.half,fi=1-bi,B=this.S[bi],F=this.S[fi];
     this.maybeChange(F,fi,ev);
-    if(this.trySteal(B,F,bi,ev)){if(this.outs>=3)this.endHalf(ev);return ev}
-    const p=B.lineup[B.bi].p,pit=F.pit,zb=this.z[p.id],zp=this.z[pit.id],bx=this.box[p.id],px=this.box[pit.id],ab=abil(p);
+    const p=B.lineup[B.bi].p,pit=F.pit,zb=this.z[p.id],zp=this.z[pit.id],bx=this.box[p.id],px=this.box[pit.id],ab=abil(p),cat=F.field.C;
     ev.push({t:'batter',pid:p.id,side:bi});
+    this.tryPick(B,F,bi,ev);if(this.outs>=3){this.endHalf(ev);return ev}
     let forced=null,off=false,looking=false,late=[],fx=null,usedA=null;
     if(zb.on&&!zb.used&&ab.k==='O'&&R()<.75){zb.used=true;forced=ab.res;off=true;usedA=p.zone;fx=ab.fx;ev.push({t:'ability',pid:p.id,side:bi,a:p.zone});this.moments.push({pid:p.id,side:bi,txt:'unleashed '+ab.n})}
     else if(zp.on&&!zp.used&&R()<.4){zp.used=true;const a=abil(pit);forced=a.res;usedA=pit.zone;fx=a.fx;late.push({t:'ability',pid:pit.id,side:fi,a:pit.zone});this.moments.push({pid:pit.id,side:fi,txt:'unleashed '+a.n})}
-    else{const c=F.field.C,zc=this.z[c.id];if(zc.on&&!zc.used&&c.zone==='mind'&&R()<.3){zc.used=true;forced='K';looking=true;usedA='mind';fx='ice';late.push({t:'ability',pid:c.id,side:fi,a:'mind'});this.moments.push({pid:c.id,side:fi,txt:'unleashed Mind Reader'})}}
-    const bs=this.bst(B,p,bi),ps=this.pst(F),stuff=(ps.vel+ps.brk)/2,diff=bs.con-stuff,apr=B.user?this.approach:0;
-    let balls=0,strikes=0,res=null;const pitches=[];
-    if(forced){let n=ri(0,2);while(n--){px.np++;if(R()<.5&&balls<3){balls++;pitches.push('ball')}else if(strikes<2){strikes++;pitches.push(R()<.5?'called':'foul')}}
-      px.np++;if(forced==='K'){pitches.push(looking?'called':'swing');res='K'}else{pitches.push('inplay');res='IP'}}
-    else while(!res){
-      px.np++;
-      const inZ=R()<clamp(.47+(ps.ctl-50)*.004,.3,.72);
-      const sw=R()<(inZ?.66+apr*.08:clamp(.3-(bs.eye-50)*.004+(ps.brk-50)*.002,.08,.5)+apr*.07);
-      if(!sw){if(inZ){strikes++;pitches.push('called');if(strikes>=3){res='K';looking=true}}else{balls++;pitches.push('ball');if(balls>=4)res='BB'}continue}
-      if(!(R()<clamp((inZ?.84:.62)+diff*.004-(strikes===2&&has(pit,'fang')?.07:0),.3,.97))){strikes++;pitches.push('swing');if(strikes>=3)res='K';continue}
-      if(R()<(strikes===2?.4:.36)){if(strikes<2)strikes++;pitches.push('foul');continue}
-      pitches.push('inplay');res='IP'}
-    let b_=0,s_=0;pitches.forEach((pt,i)=>{if(pt==='ball')b_++;else if(pt==='called'||pt==='swing')s_++;else if(pt==='foul'&&s_<2)s_++;const last=i===pitches.length-1;if(last)ev.push(...late);ev.push({t:'pitch',res:pt,b:b_,s:s_,fx:last?fx:null})});
-    let type=res,fpos=null,robbed=null;
+    else{const zc=this.z[cat.id];if(zc.on&&!zc.used&&cat.zone==='mind'&&R()<.3){zc.used=true;forced='K';looking=true;usedA='mind';fx='ice';late.push({t:'ability',pid:cat.id,side:fi,a:'mind'});this.moments.push({pid:cat.id,side:fi,txt:'unleashed Mind Reader'})}}
+    const bs=this.bst(B,p,bi),ps=this.pst(F),stuff=(ps.vel+ps.brk)/2,apr=B.user?this.approach:0;
+    // play-style and team-style modifiers. Individual styles are trade-offs; team styles pay a small fixed cost and return a benefit that scales with fit.
+    const os=p.os,pst=pit.ps,TO=B.to.id,tom=B.to.m,TD=F.td.id,tdm=F.td.m;
+    const zAdj=(pst==='flame'?-.008:pst==='painter'?.045:pst==='craft'?-.012:0)+(TD==='power'?-.006:TD==='lockdown'?.022*tdm:0);
+    const zSw=(os==='patient'?-.022:0)+(TO==='grinders'?-.012:0)+(pst==='painter'?-.03:0);
+    const chase=(os==='patient'?-.092:os==='slugger'?.02:0)+(TO==='grinders'?-.058*tom:0)+(pst==='craft'?.05:0);
+    const cAdj=(os==='contact'?.036:os==='slugger'?-.034:0)+(TO==='bombers'?-.016:TO==='linedrive'?.022*tom:0)+(pst==='flame'?-.052:pst==='ground'?.024:pst==='painter'?.014:0)+(TD==='power'?-.052*tdm:TD==='groundpound'?.01:0);
+    const foul2=(os==='patient'?.07:0)+(TO==='grinders'?.05*tom:0),frame=cat.ds==='general'?.032:0,grind=TO==='grinders'?.19*tom:0;
+    let balls=0,strikes=0,res=null,lastTy='FB',np=0;
+    const emit=(d)=>{np++;lastTy=d.ty;if(d.res==='ball')balls++;else if(d.res==='called'||d.res==='swing')strikes++;else if(d.res==='foul'&&strikes<2)strikes++;const e=this.pitchEv(d,pit,ps,balls,strikes,np);ev.push(e);return e};
+    if(forced){let n=ri(0,2);const pre=[];while(n--){px.np++;if(R()<.5&&balls+pre.filter(x=>x==='ball').length<3)pre.push('ball');else if(pre.filter(x=>x!=='ball').length<2)pre.push(R()<.5?'called':'foul')}
+      for(const r of pre)emit({res:r,ty:this.pickPitch(pit,ps,balls,strikes),inZ:r!=='ball',sw:r==='foul'});
+      px.np++;ev.push(...late);const aty={dragon:'FB',phantom:'CU',comet:'SL',seal:'SI'}[usedA]||this.pickPitch(pit,ps,balls,strikes);
+      const e=emit({res:forced==='K'?(looking?'called':'swing'):'inplay',ty:aty,inZ:forced!=='K'||looking,sw:!(forced==='K'&&looking)});e.fx=fx;if(usedA==='dragon')e.mph+=6;
+      res=forced==='K'?'K':'IP'}
+    else{const plan=this.stealPlan(B,F);
+      while(!res){
+        px.np++;px.fx+=grind;
+        const ty=this.pickPitch(pit,ps,balls,strikes),hard=HARD[ty],stf=hard?ps.vel*.75+ps.brk*.25:ps.brk*.75+ps.vel*.25,dif=bs.con-stf;
+        const inZ=R()<clamp(.452+(ps.ctl-50)*.004+zAdj+(hard?.012:-.024)+(balls===3?.07:strikes===2&&balls<2?-.05:0),.28,.76);
+        const go=plan&&plan.n===np+1&&strikes<2&&balls<3&&this.bases[plan.from-1]===plan.r&&!this.bases[plan.from];
+        const d={ty,inZ,go,sw:false,res:null};
+        if(!go)d.sw=R()<(inZ?.66+apr*.08+zSw:clamp(.3-(bs.eye-50)*.004+(ps.brk-50)*.002+chase+(hard?-.025:.045),.05,.56)+apr*.07);
+        if(!d.sw){if(inZ||R()<frame){d.res='called';d.frame=!inZ;emit(d);if(strikes>=3){res='K';looking=true}}else{d.res='ball';emit(d);if(balls>=4)res='BB'}
+          if(go){this.doSteal(B,F,bi,plan,ev);if(this.outs>=3){this.endHalf(ev);return ev}}
+          continue}
+        if(!(R()<clamp((inZ?.876:.656)+dif*.004+cAdj-(inZ?0:(hard?0:.03)+(pst==='craft'?.04:0))-(strikes===2&&has(pit,'fang')?.07:0),.3,.97))){d.res='swing';emit(d);if(strikes>=3)res='K';continue}
+        if(R()<(strikes===2?.4+foul2:.36)){d.res='foul';emit(d);continue}
+        d.res='inplay';emit(d);res='IP'}}
+    let type=res,fpos=null,robbed=null,kind=null,ih=false,dive=false,ebase=null,held=false;
     if(res==='IP'){
+      const gb=clamp(.43+GBB[lastTy]+(pst==='ground'?.12:pst==='craft'?-.06:0)+(TD==='groundpound'?.1*tdm:TD==='nofly'?-.07*tdm:0)+(os==='slugger'?-.04:os==='speedster'?.04:0),.2,.8);
+      const hrM=HRB[lastTy]*(os==='slugger'?1.3:os==='contact'?.74:os==='speedster'?.86:os==='gap'?.92:1)*(TO==='bombers'?1+.15*tom:TO==='smallball'?.95:TO==='linedrive'?.88:1)*(pst==='flame'?1.03:pst==='ground'?.7:pst==='painter'?1.05:1)*(TD==='nofly'?1.07:1);
       if(forced==='GB')type='GO';else if(forced)type=forced;
-      else if(R()<clamp(.044+(bs.pow-50)*.0016-(stuff-50)*.0006,.004,.16))type='HR';
-      else if(R()<clamp(.335+diff*.0025-(this.defAvg(F)-50)*.0012,.15,.46)){const r=R();type=r<clamp(.04+(bs.spd-50)*.0012,.01,.12)?'3B':r<clamp(.25+(bs.pow-50)*.002,.12,.4)?'2B':'1B'}
-      else{const r=R();type=r<.46?'GO':r<.88?'FO':'LO'}
+      else if(R()<clamp((.0505+(bs.pow-50)*.0016-(stuff-50)*.0006)*hrM,.003,.2))type='HR';
+      else if(R()<clamp(.342+(bs.con-stuff)*.0025-(this.defAvg(F)-50)*.0012+(os==='contact'?.026:os==='slugger'?-.006:0)+(TO==='linedrive'?.017*tom:0)+(pst==='ground'?.005:pst==='craft'?-.006:0),.15,.46)){const r=R();
+        const p3=clamp(.04+(bs.spd-50)*.0012+(os==='gap'?.014:os==='speedster'?.012:0),.01,.13),p2=clamp(.285+(bs.pow-50)*.002+(os==='gap'?.075:os==='slugger'?.035:os==='contact'?-.045:0)+(TO==='bombers'?.03*tom:TO==='linedrive'?.03*tom:0)-(TD==='nofly'?.05*tdm:0),.1,.46);
+        type=r<p3?'3B':r<p2?'2B':'1B'}
+      else{const r=R();type=r<gb?'GO':r<.88?'FO':'LO'}
       const wp=(ks,ws)=>{let r=R(),i=0;for(;i<ks.length-1;i++){if((r-=ws[i])<0)break}return ks[i]};
       fpos=type==='GO'?wp(['SS','2B','3B','1B','P'],[.3,.27,.2,.16,.07]):type==='LO'?wp(['SS','2B','3B','1B'],[.3,.3,.2,.2]):type==='FO'?(R()<.14?pick(IFS):pick(OFS)):pick(OFS);
-      if((type==='GO'||type==='FO')&&!forced&&fpos!=='P'&&R()<clamp(.03-(this.fld(F,fpos)-50)*.0008,.005,.07))type='E';
-      if(['1B','2B','3B','HR'].includes(type)&&!off){
+      if(type==='1B'||type==='2B'||type==='3B'){const r=R();kind=type==='1B'?(r<.45?'G':r<.8?'L':'F'):type==='2B'?(r<.12?'G':r<.62?'L':'F'):(r<.6?'L':'F')}
+      if(!forced){
+        const fs=pos=>pos==='P'?null:F.field[pos].ds;
+        if((type==='GO'||type==='FO')&&fpos!=='P'&&R()<clamp(.036-(this.fld(F,fpos)-50)*.0008,.005,.08)*(fs(fpos)==='vacuum'?.5:1)*(TD==='groundpound'||TD==='lockdown'?1-.35*tdm:1)){ebase=type;type='E'}
+        // slow roller beaten out for an infield single
+        else if(type==='GO'&&fpos!=='P'&&R()<clamp(.022+(bs.spd-50)*.0016+(os==='speedster'?.065:0)-(fs(fpos)==='rocket'?.04:fs(fpos)==='vacuum'?.012:0),0,.14)){type='1B';kind='G';ih=true}
+        // defensive styles take hits away
+        else if(type==='1B'&&kind!=='F'){const c=fpos==='LF'?['3B','SS']:fpos==='CF'?['SS','2B']:['2B','1B'],q=pick(c),s=fs(q);
+          if(kind==='G'&&(s==='vacuum'&&R()<.06||s==='acrobat'&&R()<.075||s==='rocket'&&R()<.05)){dive=s==='acrobat'||R()<.4;type='GO';fpos=q}
+          else if(kind==='L'&&s==='acrobat'&&R()<.055){dive=true;type='LO';fpos=q}}
+        else if((type==='2B'||type==='3B'||type==='1B'&&kind==='F')&&R()<(fs(fpos)==='ballhawk'?.1:0)+(TD==='nofly'?.06*tdm:0)){dive=true;type='FO'}
+        else if(type==='2B'&&fs(fpos)==='rocket'&&R()<.13){type='1B';kind=kind==='G'?'L':kind;held=true}// a strong arm holds the hitter to a single
+      }
+      if(['1B','2B','3B','HR'].includes(type)&&!off&&!ih){
         const c=Object.entries(F.field).filter(([pos,q])=>{const z=this.z[q.id];return z.on&&!z.used&&(q.zone==='skythief'?OFS.includes(pos):q.zone==='ironwall'&&type==='1B'&&IFS.includes(pos))});
-        if(c.length&&R()<.7){const [pos,q]=pick(c);this.z[q.id].used=true;usedA=q.zone;ev.push({t:'ability',pid:q.id,side:fi,a:q.zone});this.moments.push({pid:q.id,side:fi,txt:'unleashed '+abil(q).n});robbed=type;type=q.zone==='skythief'?'FO':'LO';fpos=pos}}
+        if(c.length&&R()<.7){const [pos,q]=pick(c);this.z[q.id].used=true;usedA=q.zone;ev.push({t:'ability',pid:q.id,side:fi,a:q.zone});this.moments.push({pid:q.id,side:fi,txt:'unleashed '+abil(q).n});robbed=type;type=q.zone==='skythief'?'FO':'LO';fpos=pos;dive=true}}
     }
-    const o0=this.outs,m=[],bz=this.bases,nb=[null,null,null],[a,c,d]=bz;let runs=0,outs=0,rbi=0,code=type;
-    const spd=r=>r.r.spd+(has(r,'roadrunner')?10:0);
+    const o0=this.outs,m=[],bz=this.bases,nb=[null,null,null],[a,c,d]=bz;let runs=0,outs=0,rbi=0,code=type,thr=null;
+    const spd=r=>this.rspd(r),isOF=fpos&&OFS.includes(fpos);
     const sc=(r,from)=>{m.push({pid:r.id,from,to:4});runs++;this.box[r.id].r++};
     const mv=(r,from,to)=>{m.push({pid:r.id,from,to});nb[to-1]=r};
-    const ofArm=fpos&&OFS.includes(fpos)?this.arm(F,fpos):50;
+    const ofArm=isOF?this.arm(F,fpos):50,rock=isOF&&F.field[fpos].ds==='rocket';
+    // extra-base decisions: xb shifts how often runners go, and a runner who goes can be thrown out.
+    const xb=(TO==='smallball'?.18*tom:0)-(rock?.18:0)-(TD==='lockdown'?.1*tdm:0);
+    const gun=(r,from,to,base)=>{// runner r tries for an extra base; returns true if he is thrown out
+      const po=clamp(base+(ofArm-50)*.003-(spd(r)-50)*.003+(rock?.1:0)+(TD==='lockdown'?.03*tdm:0)-(r.os==='speedster'?.015:0),.01,.3),roll=R();
+      if(roll<po&&o0+outs<3){m.push({pid:r.id,from,to,out:true,tag:true});outs++;thr={to,out:true,pid:r.id};return true}
+      if(roll<po+.3&&!thr)thr={to,out:false,pid:r.id};return false};
     switch(type){
       case'K':outs=1;nb[0]=a;nb[1]=c;nb[2]=d;break;
       case'LO':outs=1;m.push({pid:p.id,from:0,to:1,out:true});nb[0]=a;nb[1]=c;nb[2]=d;break;
       case'BB':if(a){if(c){if(d){sc(d,3);rbi++}mv(c,2,3)}else if(d)nb[2]=d;mv(a,1,2)}else{nb[1]=c;nb[2]=d}mv(p,0,1);break;
       case'1B':case'E':
+        if(ih||(type==='E'&&ebase==='GO')){// infield single or infield error: runners move up only when forced, a runner on third holds unless the bases are full
+          if(a){if(c){if(d){sc(d,3);rbi++}mv(c,2,3)}else if(d)nb[2]=d;mv(a,1,2)}else{nb[1]=c;nb[2]=d}mv(p,0,1);if(type==='E')rbi=0;break}
         if(d){sc(d,3);rbi++}
-        if(c){if(R()<clamp(.6+(spd(c)-50)*.006-(ofArm-50)*.004,.2,.95)){sc(c,2);rbi++}else mv(c,2,3)}
-        if(a){if(!nb[2]&&R()<clamp(.28+(spd(a)-50)*.006,.05,.7))mv(a,1,3);else mv(a,1,2)}
+        if(c){if(R()<clamp(.67+(spd(c)-50)*.006-(ofArm-50)*.004+xb+(kind==='G'?.05:0),.2,.95)){if(!gun(c,2,4,.07)){sc(c,2);rbi++}}else mv(c,2,3)}
+        if(a){if(!nb[2]&&R()<clamp(.32+(spd(a)-50)*.006+xb+(fpos==='RF'?.08:fpos==='LF'?-.08:0),.05,.75)){if(!gun(a,1,3,.05))mv(a,1,3)}else mv(a,1,2)}
         mv(p,0,1);if(type==='E')rbi=0;break;
-      case'2B':if(d){sc(d,3);rbi++}if(c){sc(c,2);rbi++}if(a){if(R()<clamp(.42+(spd(a)-50)*.006-(ofArm-50)*.004,.1,.9)){sc(a,1);rbi++}else mv(a,1,3)}mv(p,0,2);break;
+      case'2B':if(d){sc(d,3);rbi++}if(c){sc(c,2);rbi++}
+        if(a){if(R()<clamp(.47+(spd(a)-50)*.006-(ofArm-50)*.004+xb+(os==='gap'?.12:0),.1,.9)){if(!gun(a,1,4,.08)){sc(a,1);rbi++}}else mv(a,1,3)}mv(p,0,2);break;
       case'3B':for(const [r,f] of [[d,3],[c,2],[a,1]])if(r){sc(r,f);rbi++}mv(p,0,3);break;
       case'HR':for(const [r,f] of [[d,3],[c,2],[a,1]])if(r){sc(r,f);rbi++}sc(p,0);rbi++;break;
-      case'GO':
-        if(a&&o0<2&&(forced==='GB'||R()<clamp(.42-(bs.spd-50)*.004+(this.fld(F,fpos)-50)*.003,.1,.75))){
+      case'GO':{const fs=pos=>pos==='P'?null:F.field[pos].ds,piv=fpos==='SS'||fpos==='3B'?'2B':'SS';
+        if(a&&o0<2&&(forced==='GB'||R()<clamp(.39-(bs.spd-50)*.004+(this.fld(F,fpos)-50)*.003+(fs(fpos)==='acrobat'?.05:fs(fpos)==='rocket'?.06:0)+(fs(piv)==='acrobat'?.06:0)+(pst==='ground'?.03:0)+(TD==='groundpound'?.1*tdm:0)-(TO==='smallball'?.13*tom:0)-(os==='speedster'?.09:0)-(dive?.2:0),.06,.8))){
           outs=2;code='DP';m.push({pid:a.id,from:1,to:2,out:true});m.push({pid:p.id,from:0,to:1,out:true});
           if(o0+2<3){if(d)sc(d,3);if(c)mv(c,2,3)}}
-        else{outs=1;m.push({pid:p.id,from:0,to:1,out:true});
-          if(o0+1<3){if(d){if(R()<.55){sc(d,3);rbi++}else nb[2]=d}if(c){if(!nb[2]&&R()<.6)mv(c,2,3);else nb[1]=c}if(a){if(!nb[1])mv(a,1,2);else nb[0]=a}}}
-        break;
+        else{outs=1;m.push({pid:p.id,from:0,to:1,out:true});const po=TO==='smallball'?.2*tom:0;
+          if(o0+1<3){if(d){if(R()<.55+po){sc(d,3);rbi++}else nb[2]=d}if(c){if(!nb[2]&&R()<.6+po)mv(c,2,3);else nb[1]=c}if(a){if(!nb[1])mv(a,1,2);else nb[0]=a}}}
+        break}
       case'FO':outs=1;m.push({pid:p.id,from:0,to:1,out:true});
-        if(o0+1<3){if(d){if(OFS.includes(fpos)&&!robbed&&R()<clamp(.62+(spd(d)-50)*.006-(ofArm-50)*.005,.2,.95)){sc(d,3);rbi++;code='SF'}else nb[2]=d}if(c){if(!nb[2]&&OFS.includes(fpos)&&R()<.22)mv(c,2,3);else nb[1]=c}nb[0]=a}
+        if(o0+1<3){
+          if(d){if(isOF&&!robbed&&R()<clamp(.62+(spd(d)-50)*.006-(ofArm-50)*.005+xb,.2,.95)){if(gun(d,3,4,.06))code='FO';else{sc(d,3);rbi++;code='SF'}}else nb[2]=d}
+          if(c){if(!nb[2]&&isOF&&R()<clamp(.22+xb+(fpos==='RF'?.12:0),.02,.6)){if(!gun(c,2,3,.05))mv(c,2,3)}else nb[1]=c}nb[0]=a}
         break;
     }
     this.outs+=outs;this.bases=nb;this.score[bi]+=runs;this.line[bi][this.line[bi].length-1]+=runs;this.halfRuns+=runs;
     if(!['BB','SF'].includes(code))bx.ab++;const hit=['1B','2B','3B','HR'].includes(type);
     if(hit){bx.h++;px.ph++}if(type==='HR')bx.hr++;if(type==='BB'){bx.bb++;px.pbb++}if(type==='K'){bx.k++;px.pk++}bx.rbi+=rbi;px.po+=outs;px.per+=runs;
-    const n=sn(p),dir=fpos?DIRN[fpos]:'';
-    let desc={K:`${n} strikes out ${looking?'looking':'swinging'}.`,BB:`${n} draws a walk.`,'1B':`${n} singles to ${dir}.`,'2B':`${n} doubles to ${dir}.`,'3B':`${n} triples to ${dir}!`,HR:runs===4?`GRAND SLAM! ${n} clears the bases!`:`${n} crushes a home run to ${dir}!`,GO:`${n} grounds out to ${dir}.`,DP:`${n} grounds into a double play.`,FO:`${n} flies out to ${dir}.`,SF:`${n} lifts a sacrifice fly to ${dir}.`,LO:`${n} lines out to ${dir}.`,E:`${n} reaches on an error at ${dir}.`}[code];
+    const bb=res==='IP'?this.bbGen(type==='E'?ebase:type,fpos,kind,bs.pow,{ih,dive,rob:!!robbed&&isOF}):null;
+    const n=sn(p),dir=fpos?DIRN[fpos]:'',k=bb?bb.kind:'';
+    let desc={K:`${n} strikes out ${looking?'looking':'swinging'}.`,BB:`${n} draws a walk.`,
+      '1B':ih?`${n} beats out an infield single to ${dir}.`:held?`${n} drives one to ${dir} but is held to a single.`:k==='G'?`${n} grounds a single through to ${dir}.`:k==='L'?`${n} lines a single to ${dir}.`:`${n} drops a single into ${dir}.`,
+      '2B':Math.abs(bb?bb.spray:0)>38?`${n} rips a double down the line.`:`${n} doubles into the gap in ${dir}.`,'3B':`${n} triples to ${dir}!`,
+      HR:runs===4?`GRAND SLAM! ${n} clears the bases!`:`${n} crushes a ${bb?bb.dist:400}-foot home run to ${dir}!`,
+      GO:dive?`${sn(F.field[fpos]||pit)} makes a diving stop and throws out ${n}.`:`${n} grounds out to ${dir}.`,DP:`${n} grounds into a double play.`,
+      FO:dive&&!robbed?`${sn(F.field[fpos])} runs down ${n}'s drive in ${dir}.`:k==='P'?`${n} pops out to ${dir}.`:`${n} flies out to ${dir}.`,SF:`${n} lifts a sacrifice fly to ${dir}.`,
+      LO:dive&&!robbed?`${sn(F.field[fpos])} dives to snare ${n}'s liner.`:`${n} lines out to ${dir}.`,E:`${n} reaches on an error at ${dir}.`}[code];
     if(robbed)desc=`${sn(F.field[fpos])} robs ${n} of a ${robbed==='HR'?'home run':'hit'}!`;
     if(runs&&code!=='HR')desc+=runs===1?' A run scores.':` ${runs} runs score.`;
-    ev.push({t:'play',res:code,type,fpos,moves:m,runs,outs:Math.min(3,this.outs),bases:this.ids(),score:this.score.slice(),pid:p.id,side:bi,robbed,desc,abil:usedA,looking});
+    if(thr&&thr.out)desc+=` ${sn(this.S[bi].team.roster.find(q=>q.id===thr.pid))} is thrown out at ${thr.to===4?'the plate':BASEN[thr.to]}!`;
+    ev.push({t:'play',res:code,type,fpos,moves:m,runs,outs:Math.min(3,this.outs),bases:this.ids(),score:this.score.slice(),pid:p.id,side:bi,robbed,desc,abil:usedA,looking,bb,thr,dive,ih,ebase});
     if(type==='HR')this.moments.push({pid:p.id,side:bi,txt:runs===4?'hit a grand slam':'homered'});
     // gauges
     this.gB(p,B,{'1B':27,'2B':33,'3B':38,HR:50,BB:11}[type]||0,ev);this.gB(p,B,rbi*8,ev);
     if(runs)for(const l of B.lineup)if(l.p!==p)this.gB(l.p,B,3,ev);
     if(usedA==='rally')for(const l of B.lineup)if(l.p!==p)this.gain(l.p,B,25,ev);
     if(usedA==='comet')px.np=Math.max(0,px.np-12);
-    if(outs){this.gain(pit,F,code==='K'?13:code==='DP'?10:4,ev);for(const pos of POS)this.gF(F.field[pos],F,pos===fpos?(code==='DP'||robbed?22:14):pos==='C'&&code==='K'?6:1,ev)}
+    if(outs){this.gain(pit,F,code==='K'?13:code==='DP'?10:4,ev);for(const pos of POS)this.gF(F.field[pos],F,pos===fpos?(code==='DP'||robbed||dive||(thr&&thr.out)?22:14):pos==='C'&&code==='K'?6:1,ev)}
     else if(hit){const z=this.z[pit.id];if(!z.on)z.g=Math.max(0,z.g-(type==='HR'?10:4))}
     if(ab.k==='O')this.tick(p);this.tick(pit);for(const pos of POS){const q=F.field[pos];if(abil(q).k==='D')this.tick(q)}
     B.bi=(B.bi+1)%9;
