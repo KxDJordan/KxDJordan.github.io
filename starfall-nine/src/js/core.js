@@ -580,8 +580,8 @@ function offseason(){
   S.season++;S.train.spot=[];
   const lg=userLg(),base=(lg==='prem'?57:44)+2,t=UT(),pool=[];
   const needP=Math.max(0,5-t.roster.filter(isP).length);
-  for(let i=0;i<needP+2;i++)pool.push(genPlayer(base,'P',ri(15,16),i%2?'RP':'SP'));
-  while(pool.length<14)pool.push(genPlayer(base,pick(POS),ri(15,16)));
+  for(let i=0;i<needP+5;i++)pool.push(genPlayer(base,'P',ri(15,16),i%2?'RP':'SP'));
+  while(pool.length<24)pool.push(genPlayer(base,pick(POS),ri(15,16)));
   if(sk('legend'))for(const p of pool)p.pot=clamp(p.pot+6,0,97);
   G.try={pool,picked:[]};G.screen='tryouts';render()}
 function tryoutState(){const t=UT(),sel=G.try.pool.filter(p=>G.try.picked.includes(p.id)),all=t.roster.concat(sel),np=all.filter(isP).length,nb=all.length-np;
